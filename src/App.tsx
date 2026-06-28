@@ -19,6 +19,7 @@ import routerProvider, {
 import { App as AntdApp } from "antd";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { Header } from "./components/header";
+import { Title } from "./components/title";
 import { ColorModeContextProvider } from "./contexts/color-mode";
 import { Login, OAuthCallback } from "./pages/auth";
 import { MemberList } from "./pages/members";
@@ -65,7 +66,25 @@ function App() {
                       >
                         <ThemedLayout
                           Header={() => <Header sticky />}
-                          Sider={(props) => <ThemedSider {...props} fixed />}
+                          Sider={(props) => (
+                            <ThemedSider
+                              {...props}
+                              fixed
+                              Title={({ collapsed }) => <Title collapsed={collapsed} />}
+                              render={({ items, logout }) => (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    height: "100%",
+                                  }}
+                                >
+                                  <div style={{ flex: 1 }}>{items}</div>
+                                  {logout}
+                                </div>
+                              )}
+                            />
+                          )}
                         >
                           <Outlet />
                         </ThemedLayout>
