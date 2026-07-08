@@ -34,6 +34,8 @@ type Props<T> = {
   // 검색: onSearch 주면 표 위에 디바운스(300ms) 입력창 렌더.
   onSearch?: (value: string) => void;
   searchPlaceholder?: string;
+  // 검색창 옆 추가 필터(예: 리그 드롭다운).
+  filterSlot?: ReactNode;
 };
 
 function SearchInput({
@@ -75,6 +77,7 @@ export function DataTable<T extends Record<string, unknown>>({
   pagination,
   onSearch,
   searchPlaceholder,
+  filterSlot,
 }: Props<T>) {
   const orderOf = (key: string) => sorters?.find((s) => s.field === key)?.order;
 
@@ -86,8 +89,13 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className="space-y-4">
-      {onSearch && (
-        <SearchInput onSearch={onSearch} placeholder={searchPlaceholder} />
+      {(onSearch || filterSlot) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {onSearch && (
+            <SearchInput onSearch={onSearch} placeholder={searchPlaceholder} />
+          )}
+          {filterSlot}
+        </div>
       )}
       <div className="rounded-md border">
         <Table>

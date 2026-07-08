@@ -36,9 +36,7 @@ export const MemberList = () => {
         sorters={sorters}
         setSorters={setSorters}
         pagination={{ currentPage, pageCount, setCurrentPage }}
-        onSearch={(q) =>
-          setFilters(q ? [{ field: "q", operator: "contains", value: q }] : [])
-        }
+        onSearch={(q) => setFilters([{ field: "q", operator: "contains", value: q }])}
         searchPlaceholder="이름·이메일 검색"
       />
     </section>

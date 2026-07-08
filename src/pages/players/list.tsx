@@ -1,5 +1,6 @@
 import { useTable } from "@refinedev/core";
 import { DataTable, type Column } from "@/components/data-table";
+import { LeagueSelect } from "@/components/league-select";
 
 type Player = {
   id: number;
@@ -36,10 +37,15 @@ export const PlayerList = () => {
         sorters={sorters}
         setSorters={setSorters}
         pagination={{ currentPage, pageCount, setCurrentPage }}
-        onSearch={(q) =>
-          setFilters(q ? [{ field: "q", operator: "contains", value: q }] : [])
-        }
+        onSearch={(q) => setFilters([{ field: "q", operator: "contains", value: q }])}
         searchPlaceholder="선수명·실명 검색"
+        filterSlot={
+          <LeagueSelect
+            onChange={(league) =>
+              setFilters([{ field: "league", operator: "eq", value: league }])
+            }
+          />
+        }
       />
     </section>
   );
