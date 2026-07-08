@@ -12,9 +12,15 @@ const http = async (path: string, search?: URLSearchParams) => {
   const token = getToken();
   const res = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
+    // 미인증 시 Spring Security 는 302 로 /login 리다이렉트한다. 기본 fetch 는 이를 따라가
+    // HTML(200)을 받아 JSON 파싱이 깨진다 → 401 감지 실패. manual 로 막고 아래서 401 처리.
+    redirect: "manual",
   });
+  // opaqueredirect(302 차단) 또는 401/403 → 인증 실패로 통일 → authProvider.onError 가 로그아웃
+  if (res.type === "opaqueredirect" || res.status === 401 || res.status === 403) {
+    throw Object.assign(new Error("인증이 필요합니다"), { statusCode: 401 });
+  }
   if (!res.ok) {
-    // refine onError 가 statusCode 로 401 판별 → 로그아웃 처리
     throw Object.assign(new Error(`${res.status} ${res.statusText} — ${url}`), {
       statusCode: res.status,
     });
@@ -25,7 +31,7 @@ const http = async (path: string, search?: URLSearchParams) => {
 export const dataProvider: DataProvider = {
   getApiUrl: () => API_URL,
 
-  getList: async ({ resource, pagination, sorters }) => {
+  getList: async ({ resource, pagination, sorters, filters }) => {
     const { currentPage = 1, pageSize = 20, mode } = pagination ?? {};
     const params = new URLSearchParams();
     if (mode !== "off") {
@@ -34,6 +40,12 @@ export const dataProvider: DataProvider = {
     }
     // Spring 다중 정렬: sort 파라미터 반복
     sorters?.forEach((s) => params.append("sort", `${s.field},${s.order}`));
+    // 필터는 field=value 쿼리 파라미터로 그대로 전달 (예: 검색 q). 백엔드가 해석.
+    filters?.forEach((f) => {
+      if ("field" in f && f.value != null && f.value !== "") {
+        params.set(f.field, String(f.value));
+      }
+    });
 
     const body = await http(`/api/admin/${resource}`, params);
     const data = Array.isArray(body) ? body : body.content ?? [];
