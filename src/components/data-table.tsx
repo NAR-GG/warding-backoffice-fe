@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { CrudSort } from "@refinedev/core";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -30,7 +31,37 @@ type Props<T> = {
     pageCount: number;
     setCurrentPage: (page: number) => void;
   };
+  // 검색: onSearch 주면 표 위에 디바운스(300ms) 입력창 렌더.
+  onSearch?: (value: string) => void;
+  searchPlaceholder?: string;
 };
+
+function SearchInput({
+  onSearch,
+  placeholder,
+}: {
+  onSearch: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [value, setValue] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => onSearch(value.trim()), 300);
+    return () => clearTimeout(t);
+    // onSearch 는 useTable setFilters 래퍼로 안정적. value 변화에만 반응.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <div className="relative max-w-xs">
+      <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        className="pl-8"
+        placeholder={placeholder ?? "검색"}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+    </div>
+  );
+}
 
 // 서버 정렬(Refine core useTable) + shadcn Table. antd <Table> 대체.
 // 정렬 클릭 시 해당 컬럼만 asc↔desc 토글(단일 정렬).
@@ -42,6 +73,8 @@ export function DataTable<T extends Record<string, unknown>>({
   sorters,
   setSorters,
   pagination,
+  onSearch,
+  searchPlaceholder,
 }: Props<T>) {
   const orderOf = (key: string) => sorters?.find((s) => s.field === key)?.order;
 
@@ -53,6 +86,9 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className="space-y-4">
+      {onSearch && (
+        <SearchInput onSearch={onSearch} placeholder={searchPlaceholder} />
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>

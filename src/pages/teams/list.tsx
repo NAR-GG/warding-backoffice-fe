@@ -15,7 +15,7 @@ const columns: Column<Team>[] = [
 
 export const TeamList = () => {
   // 기본 정렬: 팀명순
-  const { result, tableQuery, sorters, setSorters, currentPage, setCurrentPage, pageCount } =
+  const { result, tableQuery, sorters, setSorters, setFilters, currentPage, setCurrentPage, pageCount } =
     useTable<Team>({
       resource: "teams",
       sorters: { initial: [{ field: "name", order: "asc" }] },
@@ -32,6 +32,10 @@ export const TeamList = () => {
         sorters={sorters}
         setSorters={setSorters}
         pagination={{ currentPage, pageCount, setCurrentPage }}
+        onSearch={(q) =>
+          setFilters(q ? [{ field: "q", operator: "contains", value: q }] : [])
+        }
+        searchPlaceholder="팀명·코드 검색"
       />
     </section>
   );

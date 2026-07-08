@@ -25,7 +25,7 @@ const http = async (path: string, search?: URLSearchParams) => {
 export const dataProvider: DataProvider = {
   getApiUrl: () => API_URL,
 
-  getList: async ({ resource, pagination, sorters }) => {
+  getList: async ({ resource, pagination, sorters, filters }) => {
     const { currentPage = 1, pageSize = 20, mode } = pagination ?? {};
     const params = new URLSearchParams();
     if (mode !== "off") {
@@ -34,6 +34,12 @@ export const dataProvider: DataProvider = {
     }
     // Spring 다중 정렬: sort 파라미터 반복
     sorters?.forEach((s) => params.append("sort", `${s.field},${s.order}`));
+    // 필터는 field=value 쿼리 파라미터로 그대로 전달 (예: 검색 q). 백엔드가 해석.
+    filters?.forEach((f) => {
+      if ("field" in f && f.value != null && f.value !== "") {
+        params.set(f.field, String(f.value));
+      }
+    });
 
     const body = await http(`/api/admin/${resource}`, params);
     const data = Array.isArray(body) ? body : body.content ?? [];

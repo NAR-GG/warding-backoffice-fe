@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useList } from "@refinedev/core";
 import { DataTable, type Column } from "@/components/data-table";
 
@@ -44,10 +45,17 @@ export const CronJobList = () => {
     pagination: { mode: "off" },
   });
 
-  // ponytail: 고정 카탈로그라 인터랙티브 정렬 대신 유형→작업명 기본 정렬. 정렬 UI 필요해지면 그때 추가.
-  const rows = [...(result?.data ?? [])].sort(
-    (a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name)
-  );
+  // 고정 카탈로그(전체 로드)라 검색은 클라이언트 필터. 작업명·설명 부분일치.
+  const [q, setQ] = useState("");
+  const rows = [...(result?.data ?? [])]
+    .filter(
+      (c) =>
+        !q ||
+        c.name.toLowerCase().includes(q.toLowerCase()) ||
+        c.description.toLowerCase().includes(q.toLowerCase())
+    )
+    // ponytail: 인터랙티브 정렬 대신 유형→작업명 기본 정렬. 정렬 UI 필요해지면 그때 추가.
+    .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
 
   return (
     <section className="space-y-4">
@@ -57,6 +65,8 @@ export const CronJobList = () => {
         rows={rows}
         rowKey="name"
         isLoading={query.isLoading}
+        onSearch={setQ}
+        searchPlaceholder="작업명·설명 검색"
       />
     </section>
   );

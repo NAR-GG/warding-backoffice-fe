@@ -19,7 +19,7 @@ const columns: Column<Member>[] = [
 
 export const MemberList = () => {
   // 기본 정렬: 최신 가입순
-  const { result, tableQuery, sorters, setSorters, currentPage, setCurrentPage, pageCount } =
+  const { result, tableQuery, sorters, setSorters, setFilters, currentPage, setCurrentPage, pageCount } =
     useTable<Member>({
       resource: "members",
       sorters: { initial: [{ field: "createdAt", order: "desc" }] },
@@ -36,6 +36,10 @@ export const MemberList = () => {
         sorters={sorters}
         setSorters={setSorters}
         pagination={{ currentPage, pageCount, setCurrentPage }}
+        onSearch={(q) =>
+          setFilters(q ? [{ field: "q", operator: "contains", value: q }] : [])
+        }
+        searchPlaceholder="이름·이메일 검색"
       />
     </section>
   );
