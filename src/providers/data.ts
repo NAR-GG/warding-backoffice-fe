@@ -12,9 +12,15 @@ const http = async (path: string, search?: URLSearchParams) => {
   const token = getToken();
   const res = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
+    // 미인증 시 Spring Security 는 302 로 /login 리다이렉트한다. 기본 fetch 는 이를 따라가
+    // HTML(200)을 받아 JSON 파싱이 깨진다 → 401 감지 실패. manual 로 막고 아래서 401 처리.
+    redirect: "manual",
   });
+  // opaqueredirect(302 차단) 또는 401/403 → 인증 실패로 통일 → authProvider.onError 가 로그아웃
+  if (res.type === "opaqueredirect" || res.status === 401 || res.status === 403) {
+    throw Object.assign(new Error("인증이 필요합니다"), { statusCode: 401 });
+  }
   if (!res.ok) {
-    // refine onError 가 statusCode 로 401 판별 → 로그아웃 처리
     throw Object.assign(new Error(`${res.status} ${res.statusText} — ${url}`), {
       statusCode: res.status,
     });
