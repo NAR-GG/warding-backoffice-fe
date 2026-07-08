@@ -1,19 +1,38 @@
-import { List, useTable } from "@refinedev/antd";
-import { Table } from "antd";
+import { useTable } from "@refinedev/core";
+import { DataTable, type Column } from "@/components/data-table";
+
+type Team = {
+  id: number;
+  name: string;
+  code: string;
+};
+
+const columns: Column<Team>[] = [
+  { key: "id", title: "ID", sortable: true },
+  { key: "name", title: "팀명", sortable: true },
+  { key: "code", title: "코드", sortable: true },
+];
 
 export const TeamList = () => {
   // 기본 정렬: 팀명순
-  const { tableProps } = useTable({
-    syncWithLocation: true,
-    sorters: { initial: [{ field: "name", order: "asc" }] },
-  });
+  const { result, tableQuery, sorters, setSorters, currentPage, setCurrentPage, pageCount } =
+    useTable<Team>({
+      resource: "teams",
+      sorters: { initial: [{ field: "name", order: "asc" }] },
+    });
+
   return (
-    <List title="팀">
-      <Table {...tableProps} rowKey="id">
-        <Table.Column dataIndex="id" title="ID" sorter />
-        <Table.Column dataIndex="name" title="팀명" sorter defaultSortOrder="ascend" />
-        <Table.Column dataIndex="code" title="코드" sorter />
-      </Table>
-    </List>
+    <section className="space-y-4">
+      <h1 className="text-2xl font-semibold">팀</h1>
+      <DataTable
+        columns={columns}
+        rows={result?.data ?? []}
+        rowKey="id"
+        isLoading={tableQuery.isLoading}
+        sorters={sorters}
+        setSorters={setSorters}
+        pagination={{ currentPage, pageCount, setCurrentPage }}
+      />
+    </section>
   );
 };
