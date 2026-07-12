@@ -1,0 +1,1 @@
+export { LeagueConfigList } from "./list";

@@ -18,6 +18,7 @@ import { MemberList } from "./pages/members";
 import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
 import { CronJobList } from "./pages/cron-jobs";
+import { LeagueConfigList } from "./pages/league-configs";
 import { ErrorPage } from "./pages/error";
 import { authProvider } from "./providers/auth";
 import { dataProvider } from "./providers/data";
@@ -39,6 +40,7 @@ function App() {
                 { name: "players", list: "/players", meta: { label: "선수" } },
                 { name: "teams", list: "/teams", meta: { label: "팀" } },
                 { name: "cron-jobs", list: "/cron-jobs", meta: { label: "Cron 작업" } },
+                { name: "league-configs", list: "/league-configs", meta: { label: "리그 설정" } },
               ]}
               options={{
                 syncWithLocation: true,
@@ -66,6 +68,7 @@ function App() {
                   <Route path="/players" element={<PlayerList />} />
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/cron-jobs" element={<CronJobList />} />
+                  <Route path="/league-configs" element={<LeagueConfigList />} />
                   <Route path="*" element={<ErrorPage />} />
                 </Route>
 
