@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { CrudSort } from "@refinedev/core";
-import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +15,8 @@ import {
 export type Column<T> = {
   key: string;
   title: string;
+  // 헤더 옆 i 아이콘 + 호버 설명. ponytail: 브라우저 기본 title 툴팁 — 스타일 필요해지면 radix Tooltip.
+  tooltip?: string;
   sortable?: boolean;
   render?: (row: T) => ReactNode;
 };
@@ -121,6 +123,11 @@ export function DataTable<T extends Record<string, unknown>>({
                     </Button>
                   ) : (
                     col.title
+                  )}
+                  {col.tooltip && (
+                    <span title={col.tooltip} className="ml-1 inline-flex align-middle">
+                      <Info className="size-3.5 text-muted-foreground" />
+                    </span>
                   )}
                 </TableHead>
               ))}
