@@ -5,13 +5,22 @@ import { getToken } from "./auth";
 // Spring Boot REST + Pageable 어댑터 (조회 전용).
 // 목록: GET /api/admin/{resource}?page=0&size=20&sort=field,asc → Spring Page { content, totalElements }
 // cron 처럼 페이징 없는 배열 응답도 그대로 흡수.
-// ponytail: 조회만 구현. 쓰기(create/update/delete) 필요해지면 그때 추가.
+// ponytail: 조회 + update 만 구현. create/delete 필요해지면 그때 추가.
 
-const http = async (path: string, search?: URLSearchParams) => {
+const http = async (
+  path: string,
+  search?: URLSearchParams,
+  init?: { method: string; body: unknown }
+) => {
   const url = `${API_URL}${path}${search && [...search].length ? `?${search}` : ""}`;
   const token = getToken();
   const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    method: init?.method ?? "GET",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init ? { "Content-Type": "application/json" } : {}),
+    },
+    body: init ? JSON.stringify(init.body) : undefined,
     // 미인증 시 Spring Security 는 302 로 /login 리다이렉트한다. 기본 fetch 는 이를 따라가
     // HTML(200)을 받아 JSON 파싱이 깨진다 → 401 감지 실패. manual 로 막고 아래서 401 처리.
     redirect: "manual",
@@ -62,6 +71,11 @@ export const dataProvider: DataProvider = {
   }),
 
   create: () => Promise.reject(new Error("백오피스는 조회 전용입니다")),
-  update: () => Promise.reject(new Error("백오피스는 조회 전용입니다")),
+  update: async ({ resource, id, variables }) => ({
+    data: await http(`/api/admin/${resource}/${id}`, undefined, {
+      method: "PUT",
+      body: variables,
+    }),
+  }),
   deleteOne: () => Promise.reject(new Error("백오피스는 조회 전용입니다")),
 };

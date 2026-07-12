@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { CrudSort } from "@refinedev/core";
-import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -15,6 +16,8 @@ import {
 export type Column<T> = {
   key: string;
   title: string;
+  // 헤더 옆 i 아이콘, 호버 즉시 radix Tooltip 표시.
+  tooltip?: string;
   sortable?: boolean;
   render?: (row: T) => ReactNode;
 };
@@ -121,6 +124,14 @@ export function DataTable<T extends Record<string, unknown>>({
                     </Button>
                   ) : (
                     col.title
+                  )}
+                  {col.tooltip && (
+                    <Tooltip>
+                      <TooltipTrigger className="ml-1 inline-flex align-middle">
+                        <Info className="size-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>{col.tooltip}</TooltipContent>
+                    </Tooltip>
                   )}
                 </TableHead>
               ))}
