@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTable } from "@refinedev/core";
 import { DataTable, type Column } from "@/components/data-table";
 import { LeagueSelect } from "@/components/league-select";
+import { DeleteRowButton } from "@/components/delete-row-button";
 
 type Team = {
   id: number;
@@ -13,6 +14,11 @@ const columns: Column<Team>[] = [
   { key: "id", title: "ID", sortable: true },
   { key: "name", title: "팀명", sortable: true },
   { key: "code", title: "코드", sortable: true },
+  {
+    key: "actions",
+    title: "관리",
+    render: (row) => <DeleteRowButton resource="teams" id={row.id} label={row.name} />,
+  },
 ];
 
 export const TeamList = () => {
