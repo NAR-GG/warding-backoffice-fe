@@ -2,10 +2,10 @@ import type { DataProvider } from "@refinedev/core";
 import { API_URL } from "./constants";
 import { getToken } from "./auth";
 
-// Spring Boot REST + Pageable 어댑터 (조회 전용).
+// Spring Boot REST + Pageable 어댑터 (조회 + update/delete, create만 차단).
 // 목록: GET /api/admin/{resource}?page=0&size=20&sort=field,asc → Spring Page { content, totalElements }
 // cron 처럼 페이징 없는 배열 응답도 그대로 흡수.
-// ponytail: 조회 + update 만 구현. create/delete 필요해지면 그때 추가.
+// ponytail: 조회 + update/delete 구현. create만 차단.
 
 const http = async (
   path: string,
@@ -30,10 +30,17 @@ const http = async (
     throw Object.assign(new Error("인증이 필요합니다"), { statusCode: 401 });
   }
   if (!res.ok) {
-    throw Object.assign(new Error(`${res.status} ${res.statusText} — ${url}`), {
-      statusCode: res.status,
-    });
+    // 백엔드 예외 핸들러는 { message } JSON을 준다(409/404/400). 없으면 상태줄 사용.
+    let message = `${res.status} ${res.statusText} — ${url}`;
+    try {
+      const body = await res.json();
+      if (body?.message) message = body.message;
+    } catch {
+      // JSON 아님 — 상태줄 유지
+    }
+    throw Object.assign(new Error(message), { statusCode: res.status });
   }
+  if (res.status === 204) return null; // DELETE 응답
   return res.json();
 };
 
@@ -70,12 +77,15 @@ export const dataProvider: DataProvider = {
     data: await Promise.all(ids.map((id) => http(`/api/admin/${resource}/${id}`))),
   }),
 
-  create: () => Promise.reject(new Error("백오피스는 조회 전용입니다")),
+  create: () => Promise.reject(new Error("백오피스에서 생성은 지원하지 않습니다")),
   update: async ({ resource, id, variables }) => ({
     data: await http(`/api/admin/${resource}/${id}`, undefined, {
       method: "PUT",
       body: variables,
     }),
   }),
-  deleteOne: () => Promise.reject(new Error("백오피스는 조회 전용입니다")),
+  deleteOne: async ({ resource, id }) => {
+    await http(`/api/admin/${resource}/${id}`, undefined, { method: "DELETE", body: undefined });
+    return { data: { id } as never };
+  },
 };
