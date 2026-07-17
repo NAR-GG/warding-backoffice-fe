@@ -30,7 +30,8 @@ export const PlayerList = () => {
 
   const changeLeague = (next: string) => {
     setLeague(next);
-    setFilters([{ field: "league", operator: "eq", value: next }]);
+    // "merge": 리그 필터만 교체하고 q(검색) 필터는 유지
+    setFilters([{ field: "league", operator: "eq", value: next }], "merge");
   };
 
   // 수정(팀/이미지)은 LCK 선수 한정. UI 는 리그 필터가 LCK 일 때만 노출하고, 서버도 재검증한다.

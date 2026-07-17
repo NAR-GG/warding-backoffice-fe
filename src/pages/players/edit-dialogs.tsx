@@ -57,8 +57,14 @@ export function TeamChangeDialog({ player }: { player: Player }) {
     queryOptions: { enabled: open },
   });
 
+  // 다이얼로그는 행에 상주(마운트 유지)라, 열 때마다 최신 행 값으로 리셋
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) setTeamId(player.currentTeamId ? String(player.currentTeamId) : "");
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon-sm" aria-label="팀 변경">
           <Pencil className="size-4" />
@@ -105,8 +111,16 @@ export function ImageEditDialog({ player }: { player: Player }) {
   const [unlock, setUnlock] = useState(false);
   const { save, isPending } = usePlayerUpdate();
 
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setUrl(player.imageUrl ?? "");
+      setUnlock(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon-sm" aria-label="이미지 수정">
           <ImageIcon className="size-4" />
