@@ -8,7 +8,7 @@ NAR.GG 백오피스(admin) 프론트엔드. 이 파일은 작업 세션(사람/A
 ## 무엇인가
 - 운영자가 가입자/선수/팀 명단, Cron 작업 현황, 리그별 설정을 관리하는 **admin 대시보드**.
 - 백엔드는 별도 레포 `nar-back-repo`(Spring Boot, `https://api.nar.kr`). 여기는 그 API에 붙는 프론트만.
-- **조회 + 제한적 수정**(리그 설정 토글). create/delete 없음 — dataProvider 레벨에서 막혀 있음.
+- **조회 + 수정/삭제**(가입자·선수·팀 삭제, LCK 선수 팀 이동/이미지 수정, 리그 설정 토글). create만 없음 — dataProvider 레벨에서 차단.
 
 ## 스택
 - **Refine v5 (headless)** + **shadcn/ui (Radix)** + **Tailwind CSS v4** + Vite 6 + React 19 + TS strict
@@ -20,17 +20,20 @@ NAR.GG 백오피스(admin) 프론트엔드. 이 파일은 작업 세션(사람/A
 ## 구조 (핵심 파일)
 | 파일 | 역할 |
 |------|------|
-| `src/providers/data.ts` | Spring `Page`(`{content,totalElements}`) 흡수 커스텀 데이터프로바이더. `Bearer` 헤더 부착. getList/getOne/getMany/update만 구현, create/deleteOne 차단 |
+| `src/providers/data.ts` | Spring `Page`(`{content,totalElements}`) 흡수 커스텀 데이터프로바이더. `Bearer` 헤더 부착. create만 차단 |
 | `src/providers/auth.ts` | authProvider. 구글 OAuth 리다이렉트 + localStorage 토큰 + JWT exp 검증 + 401/403 로그아웃 |
 | `src/providers/constants.ts` | `API_URL` = `import.meta.env.VITE_API_URL ?? localhost:8080` |
 | `src/providers/notification.ts` | Refine 알림 → sonner 토스트 매핑 |
 | `src/components/layout.tsx` | 셸: 사이드바(로고+메뉴+로그아웃) + 헤더(테마 토글) + Outlet |
 | `src/components/data-table.tsx` | 공용 테이블. 정렬 헤더/검색(300ms 디바운스)/필터 슬롯/페이지네이션/로딩·빈 상태 내장 |
+| `src/components/delete-row-button.tsx` | 행 삭제 버튼(confirm → `useDelete` 호출) |
+| `src/components/league-select.tsx` | 검색형 콤보박스(기본=LCK, 전체 리그 옵션). players에서 팀 이동 시 사용 |
 | `src/components/theme-provider.tsx` | 라이트/다크 (`.dark` 클래스 + localStorage) |
 | `src/components/ui/*` | shadcn 컴포넌트 (**직접 수정 금지** — 아래 컨벤션 참조) |
 | `src/pages/{members,players,teams}/list.tsx` | 목록(서버 페이징/정렬/검색) |
 | `src/pages/cron-jobs/list.tsx` | Cron 카탈로그(배열 응답, 클라 정렬/필터) |
 | `src/pages/league-configs/list.tsx` | 리그 설정 토글(의존 체인: sync→live→알림) |
+| `src/pages/players/edit-dialogs.tsx` | 선수 수정 모달(팀 이동/이미지 URL 수정). 서버 검증(LCK 출전 이력) 의존 |
 | `src/pages/auth/{login,callback}.tsx` | 로그인 버튼 / OAuth 콜백(토큰 저장) |
 | `src/index.css` | Tailwind v4 진입점 + OKLch 테마 토큰(`@theme inline`) |
 
@@ -41,7 +44,10 @@ NAR.GG 백오피스(admin) 프론트엔드. 이 파일은 작업 세션(사람/A
 - `src/components/ui/`(shadcn)는 **수정 금지**. 커스텀이 필요하면 감싸는 컴포넌트를 `src/components/`에 새로 만든다.
 - 새 shadcn 컴포넌트 추가: `npx shadcn@latest add <name>` (`components.json` 설정 사용).
 - 경로 별칭 `@/` = `src/`.
-- Refine v5 API 주의: pagination은 `currentPage`(not `current`), `useList` 반환은 `{ result, query }`(not `{data, isLoading}`).
+- Refine v5 API 주의:
+  - pagination은 `currentPage`(not `current`), `useList` 반환은 `{ result, query }`(not `{data, isLoading}`).
+  - `useUpdate`/`useDelete` 반환은 `{ mutate, mutation }` (mutation.isPending 사용). hooks/data/useUpdate.d.ts의 flat 타입 선언은 stale — 런타임은 래핑 반환.
+  - `setFilters` 기본 behavior는 "merge" (명시 인자 없이도 기존 필터 유지).
 
 ### 새 목록 페이지 추가 템플릿
 1. `src/pages/{resource}/list.tsx` — 아래 패턴 복사 (members가 최소 예시, players가 필터 슬롯 예시):
@@ -81,7 +87,8 @@ export const XxxList = () => {
 - `VITE_` env는 **전부 번들에 노출**됨 — 비밀 절대 금지. API URL만 허용.
 - 토큰은 localStorage(`accessToken`) + Bearer 헤더. **토큰 처리 로직(auth.ts/data.ts) 변경 시 반드시 사람 리뷰 요청.**
 - `dangerouslySetInnerHTML` 금지. 외부 HTML 렌더가 필요해지면 DOMPurify 도입(liveklass `SafeHtml` 참조).
-- dataProvider의 create/deleteOne 차단은 의도된 설계 — 쓰기 기능 추가 요청이 아니면 풀지 말 것.
+- dataProvider의 create 차단은 의도된 설계 — 쓰기 기능 추가 요청이 아니면 풀지 말 것.
+- 선수 수정은 서버가 LCK 출전 이력을 재검증 — 프론트 필터를 보안 경계로 취급하지 말 것.
 - 시크릿/키/DB 접속정보를 코드·문서·커밋에 남기지 말 것.
 
 ## 인증 흐름 (중요)
@@ -104,6 +111,7 @@ export const XxxList = () => {
    - OAuth 콜백: `BACKOFFICE_URL` env (deploy.yml 에 주입)
 4. **`vercel.json` SPA rewrite 필수**: 없으면 `/members` 등 새로고침 시 404.
 5. dataProvider는 fetch를 `redirect: "manual"`로 호출 — Spring의 302→HTML 루프 방지. 건드리지 말 것.
+6. **수동 수정한 선수 이미지는 `image_locked`로 보호됨** — 자동 동기화가 못 덮는다. 팀 메타데이터(name/code/imageUrl)는 여전히 매일 04:15 sync가 덮어씀(팀 수정 기능 없는 이유). 선수 `current_team_id`는 sync 무관(수동 전용).
 
 ## 배포
 - **Vercel** (Hobby, 팀 `Warding-Backoffice`). `main` push → 자동 빌드/배포.
@@ -121,7 +129,7 @@ npm run build    # tsc && refine build → dist
 로컬 백엔드 띄우려면 nar-back-repo 참고(MySQL + Elasticsearch+nori 플러그인 + service-account-key.json + application-dev.yml 필요).
 
 ## 관련 레포
-- 백엔드: `NAR-GG/nar-back-repo` (admin API: `/api/admin/{members,players,teams,cron-jobs,league-configs}`)
+- 백엔드: `NAR-GG/nar-back-repo` (admin API: `/api/admin/{members,players,teams,cron-jobs,league-configs}` — GET/PUT/DELETE)
 - UI/UX 참조: `~/dev/liveklass-backoffice-main` (위 섹션 참조)
 - 모바일(Flutter, 카카오 SDK 로그인): `NAR-GG/warding-mobile-repo`
 - 기존 웹 프론트(Next.js): `NAR-GG/nar-front-repo`
