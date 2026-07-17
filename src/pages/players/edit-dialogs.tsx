@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { API_URL } from "@/providers/constants";
 import type { Player } from "./list";
 
 export type GameAccount = { region: string; riotId: string; tier: string | null };
@@ -37,8 +38,28 @@ export function parseGameAccounts(raw: string | null): GameAccount[] {
   }
 }
 
-export function parseRiotIds(raw: string | null): string[] {
-  return parseGameAccounts(raw).map((a) => a.riotId).filter(Boolean);
+// (표시 전용 헬퍼들 — 편집은 원본 값 그대로)
+// 표시용 정리: 크롤러가 riotId에 붙여둔 잔여 텍스트("... Unranked", "Show Inactive (3)")를
+// 태그 뒤 첫 공백 기준으로 잘라낸다. 편집 다이얼로그는 원본 값을 그대로 다룬다.
+export function formatRiotId(riotId: string): string {
+  const m = riotId.match(/^(.*#\S+)/);
+  return m ? m[1] : riotId;
+}
+
+// 목록 컬럼 표시용: KR 계정(추적 주계정) 우선 + 표시용 정리.
+export function displayRiotIds(raw: string | null): string[] {
+  const accounts = parseGameAccounts(raw);
+  const sorted = [
+    ...accounts.filter((a) => a.region === "KR"),
+    ...accounts.filter((a) => a.region !== "KR"),
+  ];
+  return sorted.map((a) => formatRiotId(a.riotId)).filter(Boolean);
+}
+
+// DB의 선수 이미지는 상대경로(/images/players/…) — 백엔드가 서빙하므로 API 호스트를 붙인다.
+export function resolveImageUrl(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith("/") ? `${API_URL}${url}` : url;
 }
 
 // PUT /api/admin/players/{id} body: { imageUrl?, unlockImage?, currentTeamId? }
@@ -152,7 +173,11 @@ export function ImageEditDialog({ player }: { player: Player }) {
         <div className="space-y-3">
           <div className="flex justify-center">
             {url ? (
-              <img src={url} alt={player.name} className="size-24 rounded-full object-cover border" />
+              <img
+                src={resolveImageUrl(url) ?? undefined}
+                alt={player.name}
+                className="size-24 rounded-full object-cover border"
+              />
             ) : (
               <div className="size-24 rounded-full border bg-muted" />
             )}
