@@ -1,5 +1,6 @@
 import { useTable } from "@refinedev/core";
 import { DataTable, type Column } from "@/components/data-table";
+import { DeleteRowButton } from "@/components/delete-row-button";
 
 type Member = {
   id: number;
@@ -15,6 +16,11 @@ const columns: Column<Member>[] = [
   { key: "email", title: "이메일" },
   { key: "favoriteLeagueName", title: "관심 리그" },
   { key: "createdAt", title: "가입일", sortable: true },
+  {
+    key: "actions",
+    title: "관리",
+    render: (row) => <DeleteRowButton resource="members" id={row.id} label={row.name} />,
+  },
 ];
 
 export const MemberList = () => {
