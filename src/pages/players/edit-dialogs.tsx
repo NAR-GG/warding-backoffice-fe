@@ -259,8 +259,8 @@ export function AccountsEditDialog({ player }: { player: Player }) {
             계정 추가
           </Button>
           <p className="text-sm text-muted-foreground">
-            저장하면 잠겨서 프로필 크롤러(매일 새벽)가 되돌리지 않습니다. puuid·랭크 추적은 다음
-            동기화(매일 06:00)에 자동 반영됩니다.
+            저장 시 Riot 계정 실존을 확인하고(없는 아이디면 거부) 랭크 추적에 즉시 반영합니다.
+            저장 후엔 잠겨서 프로필 크롤러(매일 새벽)가 되돌리지 않습니다.
           </p>
           {player.gameAccountsLocked && (
             <div className="flex items-center gap-2">
