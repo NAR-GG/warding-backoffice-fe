@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { LeagueSelect } from "@/components/league-select";
 import { DeleteRowButton } from "@/components/delete-row-button";
-import { TeamChangeDialog, ImageEditDialog } from "./edit-dialogs";
+import { TeamChangeDialog, ImageEditDialog, AccountsEditDialog, parseRiotIds } from "./edit-dialogs";
 
 export type Player = {
   id: number;
@@ -16,6 +16,8 @@ export type Player = {
   currentTeamId: number | null;
   currentTeamName: string | null;
   imageLocked: boolean;
+  gameAccounts: string | null;
+  gameAccountsLocked: boolean;
 };
 
 export const PlayerList = () => {
@@ -56,6 +58,21 @@ export const PlayerList = () => {
     { key: "name", title: "선수명", sortable: true },
     { key: "realName", title: "실명" },
     { key: "currentTeamName", title: "소속팀", render: (row) => row.currentTeamName ?? "-" },
+    {
+      key: "gameAccounts",
+      title: "솔랭 계정",
+      render: (row) => {
+        const ids = parseRiotIds(row.gameAccounts);
+        return (
+          <span className="flex items-center gap-1 text-sm">
+            {ids.length ? ids.join(", ") : "-"}
+            {row.gameAccountsLocked && (
+              <Lock className="size-3 text-muted-foreground" aria-label="수동 고정" />
+            )}
+          </span>
+        );
+      },
+    },
     { key: "role", title: "포지션" },
     { key: "age", title: "나이", sortable: true },
     {
@@ -65,6 +82,7 @@ export const PlayerList = () => {
         <span className="flex items-center">
           {editable && <TeamChangeDialog player={row} />}
           {editable && <ImageEditDialog player={row} />}
+          {editable && <AccountsEditDialog player={row} />}
           <DeleteRowButton resource="players" id={row.id} label={row.name} />
         </span>
       ),

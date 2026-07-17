@@ -33,7 +33,7 @@ NAR.GG 백오피스(admin) 프론트엔드. 이 파일은 작업 세션(사람/A
 | `src/pages/{members,players,teams}/list.tsx` | 목록(서버 페이징/정렬/검색) |
 | `src/pages/cron-jobs/list.tsx` | Cron 카탈로그(배열 응답, 클라 정렬/필터) |
 | `src/pages/league-configs/list.tsx` | 리그 설정 토글(의존 체인: sync→live→알림) |
-| `src/pages/players/edit-dialogs.tsx` | 선수 수정 모달(팀 이동/이미지 URL 수정). 서버 검증(LCK 출전 이력) 의존 |
+| `src/pages/players/edit-dialogs.tsx` | 선수 수정 모달(팀 이동/이미지 URL/솔랭 계정 수정). 서버 검증(LCK 출전 이력) 의존 |
 | `src/pages/auth/{login,callback}.tsx` | 로그인 버튼 / OAuth 콜백(토큰 저장) |
 | `src/index.css` | Tailwind v4 진입점 + OKLch 테마 토큰(`@theme inline`) |
 
@@ -111,7 +111,7 @@ export const XxxList = () => {
    - OAuth 콜백: `BACKOFFICE_URL` env (deploy.yml 에 주입)
 4. **`vercel.json` SPA rewrite 필수**: 없으면 `/members` 등 새로고침 시 404.
 5. dataProvider는 fetch를 `redirect: "manual"`로 호출 — Spring의 302→HTML 루프 방지. 건드리지 말 것.
-6. **수동 수정한 선수 이미지는 `image_locked`로 보호됨** — 자동 동기화가 못 덮는다. 팀 메타데이터(name/code/imageUrl)는 여전히 매일 04:15 sync가 덮어씀(팀 수정 기능 없는 이유). 선수 `current_team_id`는 sync 무관(수동 전용).
+6. **수동 수정한 선수 이미지는 `image_locked`로 보호됨** — 자동 동기화가 못 덮는다. 팀 메타데이터(name/code/imageUrl)는 여전히 매일 04:15 sync가 덮어씀(팀 수정 기능 없는 이유). 선수 `current_team_id`는 sync 무관(수동 전용). 선수 솔랭 계정도 `game_accounts_locked`로 동일 보호(크롤러 05:30이 못 덮음). puuid 반영은 06:00 크론 자동.
 
 ## 배포
 - **Vercel** (Hobby, 팀 `Warding-Backoffice`). `main` push → 자동 빌드/배포.

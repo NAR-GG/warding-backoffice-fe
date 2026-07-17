@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useList, useUpdate } from "@refinedev/core";
-import { Pencil, ImageIcon } from "lucide-react";
+import { Gamepad2, Pencil, ImageIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Player } from "./list";
+
+export type GameAccount = { region: string; riotId: string; tier: string | null };
+
+// players.game_accounts raw JSON 파싱. 형식이 깨져 있으면 빈 배열(수정 시 새로 작성).
+export function parseGameAccounts(raw: string | null): GameAccount[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr)
+      ? arr.map((a) => ({ region: a.region ?? "", riotId: a.riotId ?? "", tier: a.tier ?? null }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function parseRiotIds(raw: string | null): string[] {
+  return parseGameAccounts(raw).map((a) => a.riotId).filter(Boolean);
+}
 
 // PUT /api/admin/players/{id} body: { imageUrl?, unlockImage?, currentTeamId? }
 // 서버가 LCK 출전 이력을 재검증하므로 UI 는 편의 필터일 뿐이다.
@@ -152,8 +171,8 @@ export function ImageEditDialog({ player }: { player: Player }) {
           </p>
           {player.imageLocked && (
             <div className="flex items-center gap-2">
-              <Checkbox id="unlock" checked={unlock} onCheckedChange={(v) => setUnlock(v === true)} />
-              <Label htmlFor="unlock" className="text-sm font-normal">
+              <Checkbox id={`unlock-image-${player.id}`} checked={unlock} onCheckedChange={(v) => setUnlock(v === true)} />
+              <Label htmlFor={`unlock-image-${player.id}`} className="text-sm font-normal">
                 잠금 해제 (자동 동기화가 다시 관리)
               </Label>
             </div>
@@ -166,6 +185,111 @@ export function ImageEditDialog({ player }: { player: Player }) {
               save(
                 player.id,
                 unlock ? { unlockImage: true } : { imageUrl: url.trim() },
+                () => setOpen(false)
+              )
+            }
+          >
+            저장
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function AccountsEditDialog({ player }: { player: Player }) {
+  const [open, setOpen] = useState(false);
+  const [accounts, setAccounts] = useState<GameAccount[]>(() => parseGameAccounts(player.gameAccounts));
+  const [unlock, setUnlock] = useState(false);
+  const { save, isPending } = usePlayerUpdate();
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) {
+      setAccounts(parseGameAccounts(player.gameAccounts));
+      setUnlock(false);
+    }
+  };
+
+  const setField = (i: number, field: "region" | "riotId", value: string) =>
+    setAccounts((prev) => prev.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
+
+  const valid = accounts.every((a) => a.region.trim() && /^.+#.+$/.test(a.riotId.trim()));
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="솔랭 계정 수정">
+          <Gamepad2 className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{player.name} — 솔랭 계정 수정</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {accounts.map((acc, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                className="w-16"
+                value={acc.region}
+                onChange={(e) => setField(i, "region", e.target.value)}
+                placeholder="KR"
+              />
+              <Input
+                value={acc.riotId}
+                onChange={(e) => setField(i, "riotId", e.target.value)}
+                placeholder="이름#태그"
+              />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="계정 삭제"
+                onClick={() => setAccounts((prev) => prev.filter((_, idx) => idx !== i))}
+              >
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAccounts((prev) => [...prev, { region: "KR", riotId: "", tier: null }])}
+          >
+            계정 추가
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            저장하면 잠겨서 프로필 크롤러(매일 새벽)가 되돌리지 않습니다. puuid·랭크 추적은 다음
+            동기화(매일 06:00)에 자동 반영됩니다.
+          </p>
+          {player.gameAccountsLocked && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`unlock-accounts-${player.id}`}
+                checked={unlock}
+                onCheckedChange={(v) => setUnlock(v === true)}
+              />
+              <Label htmlFor={`unlock-accounts-${player.id}`} className="text-sm font-normal">
+                잠금 해제 (크롤러가 다시 관리)
+              </Label>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button
+            disabled={isPending || (!unlock && !valid)}
+            onClick={() =>
+              save(
+                player.id,
+                unlock
+                  ? { unlockGameAccounts: true }
+                  : {
+                      gameAccounts: accounts.map((a) => ({
+                        region: a.region.trim(),
+                        riotId: a.riotId.trim(),
+                        tier: a.tier,
+                      })),
+                    },
                 () => setOpen(false)
               )
             }
