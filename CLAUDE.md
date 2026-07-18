@@ -33,7 +33,7 @@ NAR.GG 백오피스(admin) 프론트엔드. 이 파일은 작업 세션(사람/A
 | `src/pages/{members,players,teams}/list.tsx` | 목록(서버 페이징/정렬/검색) |
 | `src/pages/cron-jobs/list.tsx` | Cron 카탈로그(배열 응답, 클라 정렬/필터) |
 | `src/pages/league-configs/list.tsx` | 리그 설정 토글(의존 체인: sync→live→알림) |
-| `src/pages/players/edit-dialogs.tsx` | 선수 수정 모달(팀 이동/이미지 URL/솔랭 계정 수정). 서버 검증(LCK 출전 이력) 의존 |
+|  `src/pages/players/edit-dialogs.tsx` | 선수 통합 수정 모달(소속팀·이미지·솔랭 계정을 한 창에서, 변경분만 PUT). 서버 검증(LCK 출전 이력) 의존 |
 | `src/pages/auth/{login,callback}.tsx` | 로그인 버튼 / OAuth 콜백(토큰 저장) |
 | `src/index.css` | Tailwind v4 진입점 + OKLch 테마 토큰(`@theme inline`) |
 
