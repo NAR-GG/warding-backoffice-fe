@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useList, useUpdate } from "@refinedev/core";
-import { Gamepad2, Pencil, ImageIcon, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,7 @@ export function parseGameAccounts(raw: string | null): GameAccount[] {
 
 // (표시 전용 헬퍼들 — 편집은 원본 값 그대로)
 // 표시용 정리: 크롤러가 riotId에 붙여둔 잔여 텍스트("... Unranked", "Show Inactive (3)")를
-// 태그 뒤 첫 공백 기준으로 잘라낸다. 편집 다이얼로그는 원본 값을 그대로 다룬다.
+// 태그 뒤 첫 공백 기준으로 잘라낸다.
 export function formatRiotId(riotId: string): string {
   const m = riotId.match(/^(.*#\S+)/);
   return m ? m[1] : riotId;
@@ -62,35 +62,20 @@ export function resolveImageUrl(url: string | null): string | null {
   return url.startsWith("/") ? `${API_URL}${url}` : url;
 }
 
-// PUT /api/admin/players/{id} body: { imageUrl?, unlockImage?, currentTeamId? }
-// 서버가 LCK 출전 이력을 재검증하므로 UI 는 편의 필터일 뿐이다.
-
-const usePlayerUpdate = () => {
-  const { mutate, mutation } = useUpdate();
-  const save = (id: number, values: Record<string, unknown>, onDone: () => void) =>
-    mutate(
-      {
-        resource: "players",
-        id,
-        values,
-        successNotification: () => ({ message: "저장 완료", type: "success" }),
-        errorNotification: (error) => ({
-          message: "저장 실패",
-          description: error?.message ?? "잠시 후 다시 시도해 주세요",
-          type: "error",
-        }),
-      },
-      { onSuccess: onDone }
-    );
-  return { save, isPending: mutation.isPending };
-};
-
-export function TeamChangeDialog({ player }: { player: Player }) {
+// 선수 통합 수정 다이얼로그: 소속팀·이미지·솔랭 계정을 한 모달에서 수정.
+// PUT /api/admin/players/{id} — 바뀐 필드만 골라 한 번에 전송. 서버가 필드별로 독립 처리하고
+// LCK 출전 이력을 재검증한다. 잠금 해제 체크 시 해당 필드의 새 값 입력은 무시(서버 else-if와 동일).
+export function PlayerEditDialog({ player }: { player: Player }) {
   const [open, setOpen] = useState(false);
-  const [teamId, setTeamId] = useState<string>(player.currentTeamId ? String(player.currentTeamId) : "");
-  const { save, isPending } = usePlayerUpdate();
+  const [teamId, setTeamId] = useState("");
+  const [url, setUrl] = useState("");
+  const [unlockImage, setUnlockImage] = useState(false);
+  const [accounts, setAccounts] = useState<GameAccount[]>([]);
+  const [unlockAccounts, setUnlockAccounts] = useState(false);
+
+  const { mutate, mutation } = useUpdate();
   // 이동 대상은 LCK 팀만. size=50: LCK 팀 10±개라 1페이지로 충분.
-  const { result } = useList<{ id: number; name: string }>({
+  const { result: teams } = useList<{ id: number; name: string }>({
     resource: "teams",
     filters: [{ field: "league", operator: "eq", value: "LCK" }],
     pagination: { currentPage: 1, pageSize: 50 },
@@ -100,170 +85,138 @@ export function TeamChangeDialog({ player }: { player: Player }) {
   // 다이얼로그는 행에 상주(마운트 유지)라, 열 때마다 최신 행 값으로 리셋
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) setTeamId(player.currentTeamId ? String(player.currentTeamId) : "");
+    if (next) {
+      setTeamId(player.currentTeamId ? String(player.currentTeamId) : "");
+      setUrl(player.imageUrl ?? "");
+      setUnlockImage(false);
+      setAccounts(parseGameAccounts(player.gameAccounts));
+      setUnlockAccounts(false);
+    }
   };
+
+  const setAccountField = (i: number, field: "region" | "riotId", value: string) =>
+    setAccounts((prev) => prev.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
+
+  // 변경분만 모아 payload 구성 — 아무것도 안 바꿨으면 저장 비활성.
+  const initialAccounts = JSON.stringify(parseGameAccounts(player.gameAccounts));
+  const accountsChanged = JSON.stringify(accounts) !== initialAccounts;
+  const accountsValid = accounts.every((a) => a.region.trim() && /^.+#.+$/.test(a.riotId.trim()));
+  const teamChanged = teamId !== (player.currentTeamId ? String(player.currentTeamId) : "");
+  const imageChanged = url.trim() !== (player.imageUrl ?? "");
+
+  const payload: Record<string, unknown> = {};
+  if (teamChanged && teamId) payload.currentTeamId = Number(teamId);
+  if (unlockImage) payload.unlockImage = true;
+  else if (imageChanged && url.trim()) payload.imageUrl = url.trim();
+  if (unlockAccounts) payload.unlockGameAccounts = true;
+  else if (accountsChanged && accountsValid)
+    payload.gameAccounts = accounts.map((a) => ({
+      region: a.region.trim(),
+      riotId: a.riotId.trim(),
+      tier: a.tier,
+    }));
+
+  const invalidAccounts = accountsChanged && !unlockAccounts && !accountsValid;
+  const canSave = Object.keys(payload).length > 0 && !invalidAccounts && !mutation.isPending;
+
+  const save = () =>
+    mutate(
+      {
+        resource: "players",
+        id: player.id,
+        values: payload,
+        successNotification: () => ({ message: "저장 완료", type: "success" }),
+        errorNotification: (error) => ({
+          message: "저장 실패",
+          description: error?.message ?? "잠시 후 다시 시도해 주세요",
+          type: "error",
+        }),
+      },
+      { onSuccess: () => setOpen(false) }
+    );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="팀 변경">
+        <Button variant="ghost" size="icon-sm" aria-label="선수 수정">
           <Pencil className="size-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{player.name} — 소속팀 변경</DialogTitle>
+          <DialogTitle>{player.name} — 선수 정보 수정</DialogTitle>
         </DialogHeader>
+
+        {/* 소속팀 */}
         <div className="space-y-2">
-          <Label>이동할 팀</Label>
+          <Label>소속팀</Label>
           <Select value={teamId} onValueChange={setTeamId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="팀 선택" />
             </SelectTrigger>
             <SelectContent>
-              {(result?.data ?? []).map((t) => (
+              {(teams?.data ?? []).map((t) => (
                 <SelectItem key={t.id} value={String(t.id)}>
                   {t.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">
-            과거 경기 기록·통계에는 영향이 없습니다. 자동 동기화도 이 값을 덮어쓰지 않습니다.
+          <p className="text-xs text-muted-foreground">
+            과거 경기 기록·통계에는 영향 없음. 자동 동기화가 덮어쓰지 않음.
           </p>
         </div>
-        <DialogFooter>
-          <Button
-            disabled={!teamId || isPending}
-            onClick={() => save(player.id, { currentTeamId: Number(teamId) }, () => setOpen(false))}
-          >
-            저장
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
-export function ImageEditDialog({ player }: { player: Player }) {
-  const [open, setOpen] = useState(false);
-  const [url, setUrl] = useState(player.imageUrl ?? "");
-  const [unlock, setUnlock] = useState(false);
-  const { save, isPending } = usePlayerUpdate();
-
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (next) {
-      setUrl(player.imageUrl ?? "");
-      setUnlock(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="이미지 수정">
-          <ImageIcon className="size-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{player.name} — 이미지 수정</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="flex justify-center">
-            {url ? (
+        {/* 이미지 */}
+        <div className="space-y-2 border-t pt-4">
+          <Label htmlFor={`image-url-${player.id}`}>이미지 URL</Label>
+          <div className="flex items-center gap-3">
+            {url.trim() ? (
               <img
-                src={resolveImageUrl(url) ?? undefined}
+                src={resolveImageUrl(url.trim()) ?? undefined}
                 alt={player.name}
-                className="size-24 rounded-full object-cover border"
+                className="size-14 rounded-full object-cover border shrink-0"
               />
             ) : (
-              <div className="size-24 rounded-full border bg-muted" />
+              <div className="size-14 rounded-full border bg-muted shrink-0" />
             )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="player-image-url">이미지 URL</Label>
             <Input
-              id="player-image-url"
+              id={`image-url-${player.id}`}
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://…"
+              placeholder="https://… 또는 /images/players/…"
             />
           </div>
-          <p className="text-sm text-muted-foreground">
-            저장하면 이미지가 잠겨 자동 동기화(매일 새벽 등)가 덮어쓰지 않습니다.
-          </p>
-          {player.imageLocked && (
+          {player.imageLocked ? (
             <div className="flex items-center gap-2">
-              <Checkbox id={`unlock-image-${player.id}`} checked={unlock} onCheckedChange={(v) => setUnlock(v === true)} />
+              <Checkbox
+                id={`unlock-image-${player.id}`}
+                checked={unlockImage}
+                onCheckedChange={(v) => setUnlockImage(v === true)}
+              />
               <Label htmlFor={`unlock-image-${player.id}`} className="text-sm font-normal">
-                잠금 해제 (자동 동기화가 다시 관리)
+                이미지 잠금 해제 (자동 동기화가 다시 관리)
               </Label>
             </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">저장하면 잠겨서 자동 동기화가 덮어쓰지 않음.</p>
           )}
         </div>
-        <DialogFooter>
-          <Button
-            disabled={isPending || (!unlock && !url.trim())}
-            onClick={() =>
-              save(
-                player.id,
-                unlock ? { unlockImage: true } : { imageUrl: url.trim() },
-                () => setOpen(false)
-              )
-            }
-          >
-            저장
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
-export function AccountsEditDialog({ player }: { player: Player }) {
-  const [open, setOpen] = useState(false);
-  const [accounts, setAccounts] = useState<GameAccount[]>(() => parseGameAccounts(player.gameAccounts));
-  const [unlock, setUnlock] = useState(false);
-  const { save, isPending } = usePlayerUpdate();
-
-  const handleOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (next) {
-      setAccounts(parseGameAccounts(player.gameAccounts));
-      setUnlock(false);
-    }
-  };
-
-  const setField = (i: number, field: "region" | "riotId", value: string) =>
-    setAccounts((prev) => prev.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
-
-  const valid = accounts.every((a) => a.region.trim() && /^.+#.+$/.test(a.riotId.trim()));
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="솔랭 계정 수정">
-          <Gamepad2 className="size-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{player.name} — 솔랭 계정 수정</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
+        {/* 솔랭 계정 */}
+        <div className="space-y-2 border-t pt-4">
+          <Label>솔랭 계정</Label>
           {accounts.map((acc, i) => (
             <div key={i} className="flex items-center gap-2">
               <Input
                 className="w-16"
                 value={acc.region}
-                onChange={(e) => setField(i, "region", e.target.value)}
+                onChange={(e) => setAccountField(i, "region", e.target.value)}
                 placeholder="KR"
               />
               <Input
                 value={acc.riotId}
-                onChange={(e) => setField(i, "riotId", e.target.value)}
+                onChange={(e) => setAccountField(i, "riotId", e.target.value)}
                 placeholder="이름#태그"
               />
               <Button
@@ -283,42 +236,29 @@ export function AccountsEditDialog({ player }: { player: Player }) {
           >
             계정 추가
           </Button>
-          <p className="text-sm text-muted-foreground">
-            저장 시 Riot 계정 실존을 확인하고(없는 아이디면 거부) 랭크 추적에 즉시 반영합니다.
-            저장 후엔 잠겨서 프로필 크롤러(매일 새벽)가 되돌리지 않습니다.
+          {invalidAccounts && (
+            <p className="text-xs text-destructive">모든 계정은 지역과 “이름#태그” 형식이 필요합니다.</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            저장 시 Riot 계정 실존 확인(없는 아이디 거부) 후 랭크 추적에 즉시 반영. 저장 후엔 잠겨서
+            크롤러가 되돌리지 않음.
           </p>
           {player.gameAccountsLocked && (
             <div className="flex items-center gap-2">
               <Checkbox
                 id={`unlock-accounts-${player.id}`}
-                checked={unlock}
-                onCheckedChange={(v) => setUnlock(v === true)}
+                checked={unlockAccounts}
+                onCheckedChange={(v) => setUnlockAccounts(v === true)}
               />
               <Label htmlFor={`unlock-accounts-${player.id}`} className="text-sm font-normal">
-                잠금 해제 (크롤러가 다시 관리)
+                계정 잠금 해제 (크롤러가 다시 관리)
               </Label>
             </div>
           )}
         </div>
+
         <DialogFooter>
-          <Button
-            disabled={isPending || (!unlock && !valid)}
-            onClick={() =>
-              save(
-                player.id,
-                unlock
-                  ? { unlockGameAccounts: true }
-                  : {
-                      gameAccounts: accounts.map((a) => ({
-                        region: a.region.trim(),
-                        riotId: a.riotId.trim(),
-                        tier: a.tier,
-                      })),
-                    },
-                () => setOpen(false)
-              )
-            }
-          >
+          <Button disabled={!canSave} onClick={save}>
             저장
           </Button>
         </DialogFooter>

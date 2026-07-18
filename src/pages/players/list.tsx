@@ -5,9 +5,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import { LeagueSelect } from "@/components/league-select";
 import { DeleteRowButton } from "@/components/delete-row-button";
 import {
-  TeamChangeDialog,
-  ImageEditDialog,
-  AccountsEditDialog,
+  PlayerEditDialog,
   displayRiotIds,
   resolveImageUrl,
 } from "./edit-dialogs";
@@ -94,9 +92,7 @@ export const PlayerList = () => {
       title: "관리",
       render: (row) => (
         <span className="flex items-center">
-          {editable && <TeamChangeDialog player={row} />}
-          {editable && <ImageEditDialog player={row} />}
-          {editable && <AccountsEditDialog player={row} />}
+          {editable && <PlayerEditDialog player={row} />}
           <DeleteRowButton resource="players" id={row.id} label={row.name} />
         </span>
       ),
