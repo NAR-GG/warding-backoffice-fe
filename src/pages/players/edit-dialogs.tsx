@@ -144,7 +144,7 @@ export function PlayerEditDialog({ player }: { player: Player }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{player.name} — 선수 정보 수정</DialogTitle>
+          <DialogTitle>선수 정보 수정</DialogTitle>
         </DialogHeader>
 
         {/* 소속팀 */}
