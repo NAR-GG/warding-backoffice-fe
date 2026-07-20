@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router";
 import { useGetIdentity, useLogout, useMenu } from "@refinedev/core";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut, Moon, PanelLeft, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
@@ -13,13 +14,31 @@ export function Layout() {
   const { mutate: logout } = useLogout();
   const { data: user } = useGetIdentity<Identity>();
   const { mode, toggle } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Cmd/Ctrl+B로 사이드바 토글
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setSidebarOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // 다크모드=흰 워드마크, 라이트=검은 워드마크 (원본 title.tsx 규칙 유지)
   const logo = mode === "dark" ? "/warding.svg" : "/warding-dark.svg";
 
   return (
     <div className="flex h-screen bg-background text-foreground">
-      <aside className="flex w-56 flex-col border-r bg-sidebar text-sidebar-foreground">
+      <aside
+        className={cn(
+          "flex flex-col border-r bg-sidebar text-sidebar-foreground overflow-hidden transition-[width] duration-200",
+          sidebarOpen ? "w-56" : "w-0 border-r-0"
+        )}
+      >
         <Link to="/" className="flex h-16 items-center justify-center border-b">
           <img src={logo} alt="Warding" className="h-7 w-auto" />
         </Link>
@@ -55,7 +74,17 @@ export function Layout() {
       </aside>
 
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center justify-end gap-4 border-b px-6">
+        <header className="flex h-16 items-center gap-4 border-b px-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen((v) => !v)}
+            aria-label="사이드바 토글 (⌘B)"
+            title="사이드바 토글 (⌘B)"
+          >
+            <PanelLeft className="size-4" />
+          </Button>
+          <div className="flex-1" />
           <Button variant="ghost" size="icon" onClick={toggle} aria-label="테마 전환">
             {mode === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
