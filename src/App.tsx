@@ -19,6 +19,7 @@ import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
 import { CronJobList } from "./pages/cron-jobs";
 import { LeagueConfigList } from "./pages/league-configs";
+import { SubscriptionList, SubscriptionDetail } from "./pages/subscriptions";
 import { ErrorPage } from "./pages/error";
 import { authProvider } from "./providers/auth";
 import { dataProvider } from "./providers/data";
@@ -38,6 +39,7 @@ function App() {
               resources={[
                 { name: "members", list: "/members", meta: { label: "가입자" } },
                 { name: "players", list: "/players", meta: { label: "선수" } },
+                { name: "subscriptions", list: "/subscriptions", meta: { label: "구독" } },
                 { name: "teams", list: "/teams", meta: { label: "팀" } },
                 { name: "cron-jobs", list: "/cron-jobs", meta: { label: "Cron 작업" } },
                 { name: "league-configs", list: "/league-configs", meta: { label: "리그 설정" } },
@@ -66,6 +68,8 @@ function App() {
                   <Route index element={<NavigateToResource resource="members" />} />
                   <Route path="/members" element={<MemberList />} />
                   <Route path="/players" element={<PlayerList />} />
+                  <Route path="/subscriptions" element={<SubscriptionList />} />
+                  <Route path="/subscriptions/:playerId" element={<SubscriptionDetail />} />
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/cron-jobs" element={<CronJobList />} />
                   <Route path="/league-configs" element={<LeagueConfigList />} />

@@ -39,6 +39,8 @@ type Props<T> = {
   searchPlaceholder?: string;
   // 검색창 옆 추가 필터(예: 리그 드롭다운).
   filterSlot?: ReactNode;
+  // 행 클릭 시 콜백. 주면 행에 커서/호버 스타일 적용(상세 이동 등).
+  onRowClick?: (row: T) => void;
 };
 
 function SearchInput({
@@ -81,6 +83,7 @@ export function DataTable<T extends Record<string, unknown>>({
   onSearch,
   searchPlaceholder,
   filterSlot,
+  onRowClick,
 }: Props<T>) {
   const orderOf = (key: string) => sorters?.find((s) => s.field === key)?.order;
 
@@ -158,7 +161,11 @@ export function DataTable<T extends Record<string, unknown>>({
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={String(row[rowKey])}>
+                <TableRow
+                  key={String(row[rowKey])}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={onRowClick ? "cursor-pointer" : undefined}
+                >
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       {col.render ? col.render(row) : String(row[col.key] ?? "")}
