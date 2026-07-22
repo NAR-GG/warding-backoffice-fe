@@ -80,7 +80,8 @@ export const SubscriptionList = () => {
         onSearch={(q) => setFilters([{ field: "q", operator: "contains", value: q }], "merge")}
         searchPlaceholder="선수명 검색"
         onRowClick={(row) =>
-          navigate(`/subscriptions/${row.id}`, { state: { playerName: row.playerName } })
+          // 이름을 쿼리로 전달 → 새로고침·직접 접근에도 유지(navigation state는 소실됨).
+          navigate(`/subscriptions/${row.id}?name=${encodeURIComponent(row.playerName)}`)
         }
       />
     </section>

@@ -1,5 +1,5 @@
 import { useTable } from "@refinedev/core";
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { ChevronLeft } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 
@@ -13,8 +13,8 @@ export type Subscriber = {
 
 export const SubscriptionDetail = () => {
   const { playerId } = useParams();
-  const location = useLocation();
-  const playerName = (location.state as { playerName?: string } | null)?.playerName;
+  const [searchParams] = useSearchParams();
+  const playerName = searchParams.get("name") ?? undefined;
 
   const { result, tableQuery, currentPage, setCurrentPage, pageCount } = useTable<Subscriber>({
     resource: `subscriptions/players/${playerId}/subscribers`,
