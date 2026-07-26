@@ -38,7 +38,7 @@ export const SubscriptionDetail = () => {
   return (
     <section className="space-y-4">
       <Link
-        to="/subscriptions"
+        to="/subscriptions/players"
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="size-4" />

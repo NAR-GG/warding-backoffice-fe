@@ -8,7 +8,7 @@ import routerProvider, {
   NavigateToResource,
   UnsavedChangesNotifier,
 } from "@refinedev/react-router";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 
 import { Toaster } from "@/components/ui/sonner";
 import { Layout } from "./components/layout";
@@ -19,7 +19,12 @@ import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
 import { CronJobList } from "./pages/cron-jobs";
 import { LeagueConfigList } from "./pages/league-configs";
-import { SubscriptionList, SubscriptionDetail } from "./pages/subscriptions";
+import {
+  SubscriptionList,
+  SubscriptionDetail,
+  TeamSubscriptionList,
+  TeamSubscriptionDetail,
+} from "./pages/subscriptions";
 import { ErrorPage } from "./pages/error";
 import { authProvider } from "./providers/auth";
 import { dataProvider } from "./providers/data";
@@ -68,8 +73,12 @@ function App() {
                   <Route index element={<NavigateToResource resource="members" />} />
                   <Route path="/members" element={<MemberList />} />
                   <Route path="/players" element={<PlayerList />} />
-                  <Route path="/subscriptions" element={<SubscriptionList />} />
-                  <Route path="/subscriptions/:playerId" element={<SubscriptionDetail />} />
+                  {/* 구독: 선수/팀 탭. 루트는 선수 탭으로 리다이렉트 */}
+                  <Route path="/subscriptions" element={<Navigate to="/subscriptions/players" replace />} />
+                  <Route path="/subscriptions/players" element={<SubscriptionList />} />
+                  <Route path="/subscriptions/players/:playerId" element={<SubscriptionDetail />} />
+                  <Route path="/subscriptions/teams" element={<TeamSubscriptionList />} />
+                  <Route path="/subscriptions/teams/:teamId" element={<TeamSubscriptionDetail />} />
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/cron-jobs" element={<CronJobList />} />
                   <Route path="/league-configs" element={<LeagueConfigList />} />
