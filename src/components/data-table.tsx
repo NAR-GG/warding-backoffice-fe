@@ -187,6 +187,14 @@ export function DataTable<T extends Record<string, unknown>>({
             variant="outline"
             size="sm"
             disabled={pagination.currentPage <= 1}
+            onClick={() => pagination.setCurrentPage(1)}
+          >
+            맨처음
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.currentPage <= 1}
             onClick={() => pagination.setCurrentPage(pagination.currentPage - 1)}
           >
             이전
@@ -198,6 +206,14 @@ export function DataTable<T extends Record<string, unknown>>({
             onClick={() => pagination.setCurrentPage(pagination.currentPage + 1)}
           >
             다음
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.currentPage >= pagination.pageCount}
+            onClick={() => pagination.setCurrentPage(pagination.pageCount)}
+          >
+            맨끝
           </Button>
         </div>
       )}
