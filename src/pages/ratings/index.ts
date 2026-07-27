@@ -1,0 +1,1 @@
+export { RatingList } from "./list";
