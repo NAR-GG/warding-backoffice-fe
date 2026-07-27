@@ -14,6 +14,11 @@ import {
 export type Rating = {
   id: number;
   matchId: string;
+  leagueName: string | null;
+  matchTitle: string | null;
+  blueTeamCode: string | null;
+  redTeamCode: string | null;
+  matchDate: string | null;
   playerName: string;
   championName: string | null;
   role: string | null;
@@ -26,9 +31,49 @@ export type Rating = {
 const RATINGS = ["1", "2", "3", "4", "5"];
 const ALL = "all";
 
+// "2026-07-26T10:25:00" → "2026-07-26 10:25"
+const formatDateTime = (value: string | null) =>
+  value ? value.replace("T", " ").slice(0, 16) : "—";
+
 const columns: Column<Rating>[] = [
-  { key: "createdAt", title: "작성일", sortable: true },
+  {
+    key: "createdAt",
+    title: "작성일",
+    sortable: true,
+    render: (row) => (
+      <span className="whitespace-nowrap">{formatDateTime(row.createdAt)}</span>
+    ),
+  },
   { key: "memberNickname", title: "작성자" },
+  {
+    key: "leagueName",
+    title: "리그",
+    render: (row) => row.leagueName ?? <span className="text-muted-foreground">—</span>,
+  },
+  {
+    key: "match",
+    title: "경기",
+    tooltip: "팀 대결과 매치 ID. 매치 정보 동기화 전이면 ID만 표시된다",
+    render: (row) => (
+      <span className="whitespace-nowrap">
+        {row.blueTeamCode && row.redTeamCode ? (
+          <>
+            {row.blueTeamCode} <span className="text-muted-foreground">vs</span> {row.redTeamCode}
+          </>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+        <span className="block text-xs text-muted-foreground">{row.matchId}</span>
+      </span>
+    ),
+  },
+  {
+    key: "matchDate",
+    title: "경기일",
+    render: (row) => (
+      <span className="whitespace-nowrap">{formatDateTime(row.matchDate)}</span>
+    ),
+  },
   {
     key: "playerName",
     title: "선수",
@@ -53,7 +98,6 @@ const columns: Column<Rating>[] = [
     render: (row) =>
       row.comment ?? <span className="text-muted-foreground">—</span>,
   },
-  { key: "matchId", title: "매치 ID", tooltip: "리뷰가 달린 경기(매치) 식별자" },
   {
     key: "actions",
     title: "관리",
