@@ -31,11 +31,20 @@ export type Rating = {
 const RATINGS = ["1", "2", "3", "4", "5"];
 const ALL = "all";
 
+// 검색 대상(백엔드 field 파라미터). 선택에 따라 검색창 플레이스홀더도 바뀐다.
+const SEARCH_FIELDS = [
+  { value: ALL, label: "전체", placeholder: "선수·작성자·한줄평 검색" },
+  { value: "player", label: "선수", placeholder: "선수명 검색" },
+  { value: "member", label: "작성자", placeholder: "작성자 닉네임 검색" },
+  { value: "comment", label: "한줄평", placeholder: "한줄평 검색" },
+];
+
 // "2026-07-26T10:25:00" → "2026-07-26 10:25"
 const formatDateTime = (value: string | null) =>
   value ? value.replace("T", " ").slice(0, 16) : "—";
 
 const columns: Column<Rating>[] = [
+  { key: "id", title: "ID", sortable: true },
   {
     key: "createdAt",
     title: "작성일",
@@ -44,6 +53,7 @@ const columns: Column<Rating>[] = [
       <span className="whitespace-nowrap">{formatDateTime(row.createdAt)}</span>
     ),
   },
+  { key: "matchId", title: "매치 ID", tooltip: "리뷰가 달린 경기(매치) 식별자" },
   { key: "memberNickname", title: "작성자" },
   {
     key: "leagueName",
@@ -53,7 +63,7 @@ const columns: Column<Rating>[] = [
   {
     key: "match",
     title: "경기",
-    tooltip: "팀 대결과 매치 ID. 매치 정보 동기화 전이면 ID만 표시된다",
+    tooltip: "매치 정보 동기화 전이면 팀 대결이 비어 있다",
     render: (row) => (
       <span className="whitespace-nowrap">
         {row.blueTeamCode && row.redTeamCode ? (
@@ -63,7 +73,6 @@ const columns: Column<Rating>[] = [
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
-        <span className="block text-xs text-muted-foreground">{row.matchId}</span>
       </span>
     ),
   },
@@ -113,6 +122,8 @@ const columns: Column<Rating>[] = [
 
 export const RatingList = () => {
   const [rating, setRating] = useState(ALL);
+  const [searchField, setSearchField] = useState(ALL);
+  const [query, setQuery] = useState("");
   // 기본 정렬: 최신 작성순
   const { result, tableQuery, sorters, setSorters, setFilters, currentPage, setCurrentPage, pageCount } =
     useTable<Rating>({
@@ -126,6 +137,16 @@ export const RatingList = () => {
     setFilters([{ field: "rating", operator: "eq", value: next === ALL ? "" : next }], "merge");
   };
 
+  // 검색 대상(field)이 바뀌면 현재 검색어로 즉시 다시 조회한다
+  const applySearch = (field: string, q: string) =>
+    setFilters(
+      [
+        { field: "field", operator: "eq", value: field },
+        { field: "q", operator: "contains", value: q },
+      ],
+      "merge"
+    );
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold">리뷰</h1>
@@ -137,22 +158,47 @@ export const RatingList = () => {
         sorters={sorters}
         setSorters={setSorters}
         pagination={{ currentPage, pageCount, setCurrentPage }}
-        onSearch={(q) => setFilters([{ field: "q", operator: "contains", value: q }], "merge")}
-        searchPlaceholder="선수·작성자·한줄평 검색"
+        onSearch={(q) => {
+          setQuery(q);
+          applySearch(searchField, q);
+        }}
+        searchPlaceholder={
+          SEARCH_FIELDS.find((f) => f.value === searchField)?.placeholder ?? "검색"
+        }
         filterSlot={
-          <Select value={rating} onValueChange={changeRating}>
-            <SelectTrigger size="sm" className="w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>별점 전체</SelectItem>
-              {RATINGS.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {"★".repeat(Number(r))}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <>
+            <Select
+              value={searchField}
+              onValueChange={(next) => {
+                setSearchField(next);
+                applySearch(next, query);
+              }}
+            >
+              <SelectTrigger size="sm" className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SEARCH_FIELDS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={rating} onValueChange={changeRating}>
+              <SelectTrigger size="sm" className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>별점 전체</SelectItem>
+                {RATINGS.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {"★".repeat(Number(r))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
         }
       />
     </section>
