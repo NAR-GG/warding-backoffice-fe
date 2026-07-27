@@ -19,6 +19,7 @@ import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
 import { CronJobList } from "./pages/cron-jobs";
 import { LeagueConfigList } from "./pages/league-configs";
+import { RatingList } from "./pages/ratings";
 import {
   SubscriptionList,
   SubscriptionDetail,
@@ -46,6 +47,7 @@ function App() {
                 { name: "players", list: "/players", meta: { label: "선수" } },
                 { name: "subscriptions", list: "/subscriptions", meta: { label: "구독" } },
                 { name: "teams", list: "/teams", meta: { label: "팀" } },
+                { name: "ratings", list: "/ratings", meta: { label: "리뷰" } },
                 { name: "cron-jobs", list: "/cron-jobs", meta: { label: "Cron 작업" } },
                 { name: "league-configs", list: "/league-configs", meta: { label: "리그 설정" } },
               ]}
@@ -80,6 +82,7 @@ function App() {
                   <Route path="/subscriptions/teams" element={<TeamSubscriptionList />} />
                   <Route path="/subscriptions/teams/:teamId" element={<TeamSubscriptionDetail />} />
                   <Route path="/teams" element={<TeamList />} />
+                  <Route path="/ratings" element={<RatingList />} />
                   <Route path="/cron-jobs" element={<CronJobList />} />
                   <Route path="/league-configs" element={<LeagueConfigList />} />
                   <Route path="*" element={<ErrorPage />} />
