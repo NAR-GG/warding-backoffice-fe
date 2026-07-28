@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useList, useUpdate } from "@refinedev/core";
+import { useInvalidate, useList, useUpdate } from "@refinedev/core";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_URL } from "@/providers/constants";
+import { getToken } from "@/providers/auth";
 import type { Player } from "./list";
 
 export type GameAccount = { region: string; riotId: string; tier: string | null };
@@ -72,8 +73,41 @@ export function PlayerEditDialog({ player }: { player: Player }) {
   const [unlockImage, setUnlockImage] = useState(false);
   const [accounts, setAccounts] = useState<GameAccount[]>([]);
   const [unlockAccounts, setUnlockAccounts] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const { mutate, mutation } = useUpdate();
+  const invalidate = useInvalidate();
+
+  // 이미지 업로드는 multipart라 dataProvider(JSON 전용)를 타지 않고 직접 호출한다.
+  // 서버가 파일 저장 + image_url 갱신(+잠금)까지 처리하므로 저장 버튼과 무관하게 즉시 반영된다.
+  const uploadImage = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch(`${API_URL}/api/admin/players/${player.id}/image`, {
+        method: "POST",
+        headers: { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+        body,
+      });
+      if (!res.ok) {
+        const message = await res.json().then(
+          (b) => b?.message ?? `${res.status} ${res.statusText}`,
+          () => `${res.status} ${res.statusText}`
+        );
+        throw new Error(message);
+      }
+      const updated: Player = await res.json();
+      setUrl(updated.imageUrl ?? "");
+      invalidate({ resource: "players", invalidates: ["list"] });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "업로드 실패");
+    } finally {
+      setUploading(false);
+    }
+  };
   // 이동 대상은 LCK 팀만. size=50: LCK 팀 10±개라 1페이지로 충분.
   const { result: teams } = useList<{ id: number; name: string }>({
     resource: "teams",
@@ -91,6 +125,7 @@ export function PlayerEditDialog({ player }: { player: Player }) {
       setUnlockImage(false);
       setAccounts(parseGameAccounts(player.gameAccounts));
       setUnlockAccounts(false);
+      setUploadError(null);
     }
   };
 
@@ -187,6 +222,25 @@ export function PlayerEditDialog({ player }: { player: Player }) {
               placeholder="https://… 또는 /images/players/…"
             />
           </div>
+          {/* 파일 업로드: 배포 없이 즉시 반영. 저장 버튼과 별개로 업로드 시점에 서버가 커밋한다. */}
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept="image/webp,image/png,image/jpeg"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ""; // 같은 파일 재선택도 onChange 가 뜨게
+                if (file) uploadImage(file);
+              }}
+              className="text-xs"
+            />
+            {uploading && <span className="text-xs text-muted-foreground">업로드 중…</span>}
+          </div>
+          {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+          <p className="text-xs text-muted-foreground">
+            webp·png·jpeg, 2MB 이하. 업로드하면 즉시 저장되고 이미지 잠금이 걸린다.
+          </p>
           {player.imageLocked ? (
             <div className="flex items-center gap-2">
               <Checkbox
