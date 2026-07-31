@@ -103,3 +103,62 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 공지 WYSIWYG 에디터 (Tiptap) — Orca 스타일 인라인 렌더링 */
+.notice-editor .tiptap {
+  min-height: 380px;
+  padding: 1rem 1.25rem 2rem;
+  outline: none;
+  font-size: 0.925rem;
+  line-height: 1.7;
+}
+.notice-editor .tiptap h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+}
+.notice-editor .tiptap h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.4rem;
+}
+.notice-editor .tiptap h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1rem 0 0.3rem;
+}
+.notice-editor .tiptap p {
+  margin: 0.35rem 0;
+}
+.notice-editor .tiptap ul,
+.notice-editor .tiptap ol {
+  padding-left: 1.4rem;
+  margin: 0.4rem 0;
+}
+.notice-editor .tiptap ul { list-style: disc; }
+.notice-editor .tiptap ol { list-style: decimal; }
+.notice-editor .tiptap li { margin: 0.2rem 0; }
+.notice-editor .tiptap blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.9rem;
+  color: var(--muted-foreground);
+  margin: 0.6rem 0;
+}
+.notice-editor .tiptap a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+.notice-editor .tiptap img {
+  max-width: min(100%, 600px);
+  border-radius: 0.5rem;
+  margin: 0.6rem 0;
+}
+.notice-editor .tiptap img.ProseMirror-selectednode {
+  outline: 2px solid #3b82f6;
+}
+
+/* 공지 읽기 전용 조회 — 에디터 스타일 재사용하되 입력창 느낌 제거 */
+.notice-view .tiptap {
+  min-height: 0;
+  padding: 0.25rem 0 2rem;
+}
