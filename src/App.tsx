@@ -18,6 +18,7 @@ import { MemberList } from "./pages/members";
 import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
 import { CronJobList } from "./pages/cron-jobs";
+import { NoticeCreate, NoticeEdit, NoticeList, NoticeView } from "./pages/notices";
 import { LeagueConfigList } from "./pages/league-configs";
 import { RatingList } from "./pages/ratings";
 import {
@@ -48,6 +49,14 @@ function App() {
                 { name: "subscriptions", list: "/subscriptions", meta: { label: "구독" } },
                 { name: "teams", list: "/teams", meta: { label: "팀" } },
                 { name: "ratings", list: "/ratings", meta: { label: "리뷰" } },
+                {
+                  name: "notices",
+                  list: "/notices",
+                  create: "/notices/new",
+                  edit: "/notices/:id/edit",
+                  show: "/notices/:id",
+                  meta: { label: "공지사항" },
+                },
                 { name: "cron-jobs", list: "/cron-jobs", meta: { label: "Cron 작업" } },
                 { name: "league-configs", list: "/league-configs", meta: { label: "리그 설정" } },
               ]}
@@ -83,6 +92,10 @@ function App() {
                   <Route path="/subscriptions/teams/:teamId" element={<TeamSubscriptionDetail />} />
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/ratings" element={<RatingList />} />
+                  <Route path="/notices" element={<NoticeList />} />
+                  <Route path="/notices/new" element={<NoticeCreate />} />
+                  <Route path="/notices/:id" element={<NoticeView />} />
+                  <Route path="/notices/:id/edit" element={<NoticeEdit />} />
                   <Route path="/cron-jobs" element={<CronJobList />} />
                   <Route path="/league-configs" element={<LeagueConfigList />} />
                   <Route path="*" element={<ErrorPage />} />

@@ -2,10 +2,9 @@ import type { DataProvider } from "@refinedev/core";
 import { API_URL } from "./constants";
 import { getToken } from "./auth";
 
-// Spring Boot REST + Pageable 어댑터 (조회 + update/delete, create만 차단).
+// Spring Boot REST + Pageable 어댑터 (전체 CRUD).
 // 목록: GET /api/admin/{resource}?page=0&size=20&sort=field,asc → Spring Page { content, totalElements }
 // cron 처럼 페이징 없는 배열 응답도 그대로 흡수.
-// ponytail: 조회 + update/delete 구현. create만 차단.
 
 const http = async (
   path: string,
@@ -44,10 +43,59 @@ const http = async (
   return res.json();
 };
 
+// ── 공지 mock ─────────────────────────────────────────────────────
+// ponytail: 공지 백엔드(/api/admin/notices)가 배포되면 이 블록 통째로 삭제.
+// 새로고침하면 초기화되는 인메모리 데이터로 목록/작성/수정/삭제 UI만 확인한다.
+export const USE_NOTICE_MOCK = false;
+const noticeMock = (resource: string) => USE_NOTICE_MOCK && resource === "notices";
+let mockNoticeId = 4;
+let mockNotices: Record<string, unknown>[] = [
+  {
+    id: 3,
+    title: "[업데이트] 워딩 1.0.5 업데이트 안내",
+    content: "안녕하세요, 워딩입니다.\n\n## 개선 사항\n- 선수 평점 집계가 더 정확해졌어요.",
+    pinned: true,
+    promoteUntil: "2026-08-04",
+    publishedAt: "2026-07-28T10:00:00",
+    createdAt: "2026-07-28T10:00:00",
+  },
+  {
+    id: 2,
+    title: "[반영완료] 선수 추가 요청 반영 완료 안내 (7월 4주차)",
+    content: "이번 주에 접수해 주신 선수 추가 요청이 반영되었습니다.",
+    pinned: false,
+    promoteUntil: null,
+    publishedAt: "2026-07-29T14:20:00",
+    createdAt: "2026-07-29T14:20:00",
+  },
+  {
+    id: 1,
+    title: "커뮤니티 오픈 사전 안내 (초안)",
+    content: "커뮤니티 기능을 준비 중입니다.",
+    pinned: false,
+    promoteUntil: null,
+    publishedAt: null,
+    createdAt: "2026-07-30T09:00:00",
+  },
+];
+// published 플래그 → publishedAt 변환(서버 동작 모사).
+const applyPublished = (values: Record<string, unknown>, prev?: Record<string, unknown>) => {
+  const { published, ...rest } = values;
+  return {
+    ...rest,
+    publishedAt: published
+      ? (prev?.publishedAt as string | null) ?? new Date().toISOString()
+      : null,
+  };
+};
+
 export const dataProvider: DataProvider = {
   getApiUrl: () => API_URL,
 
   getList: async ({ resource, pagination, sorters, filters }) => {
+    if (noticeMock(resource)) {
+      return { data: mockNotices as never[], total: mockNotices.length };
+    }
     const { currentPage = 1, pageSize = 20, mode } = pagination ?? {};
     const params = new URLSearchParams();
     if (mode !== "off") {
@@ -69,22 +117,55 @@ export const dataProvider: DataProvider = {
     return { data, total };
   },
 
-  getOne: async ({ resource, id }) => ({
-    data: await http(`/api/admin/${resource}/${id}`),
-  }),
+  getOne: async ({ resource, id }) => {
+    if (noticeMock(resource)) {
+      const row = mockNotices.find((n) => String(n.id) === String(id));
+      if (!row) throw Object.assign(new Error("공지를 찾을 수 없습니다"), { statusCode: 404 });
+      return { data: row as never };
+    }
+    return { data: await http(`/api/admin/${resource}/${id}`) };
+  },
 
   getMany: async ({ resource, ids }) => ({
     data: await Promise.all(ids.map((id) => http(`/api/admin/${resource}/${id}`))),
   }),
 
-  create: () => Promise.reject(new Error("백오피스에서 생성은 지원하지 않습니다")),
-  update: async ({ resource, id, variables }) => ({
-    data: await http(`/api/admin/${resource}/${id}`, undefined, {
-      method: "PUT",
-      body: variables,
-    }),
-  }),
+  create: async ({ resource, variables }) => {
+    if (noticeMock(resource)) {
+      const row = {
+        id: mockNoticeId++,
+        createdAt: new Date().toISOString(),
+        ...applyPublished(variables as Record<string, unknown>),
+      };
+      mockNotices = [row, ...mockNotices];
+      return { data: row as never };
+    }
+    return {
+      data: await http(`/api/admin/${resource}`, undefined, {
+        method: "POST",
+        body: variables,
+      }),
+    };
+  },
+  update: async ({ resource, id, variables }) => {
+    if (noticeMock(resource)) {
+      const prev = mockNotices.find((n) => n.id === id);
+      const row = { ...prev, ...applyPublished(variables as Record<string, unknown>, prev) };
+      mockNotices = mockNotices.map((n) => (n.id === id ? row : n));
+      return { data: row as never };
+    }
+    return {
+      data: await http(`/api/admin/${resource}/${id}`, undefined, {
+        method: "PUT",
+        body: variables,
+      }),
+    };
+  },
   deleteOne: async ({ resource, id }) => {
+    if (noticeMock(resource)) {
+      mockNotices = mockNotices.filter((n) => n.id !== id);
+      return { data: { id } as never };
+    }
     await http(`/api/admin/${resource}/${id}`, undefined, { method: "DELETE", body: undefined });
     return { data: { id } as never };
   },
