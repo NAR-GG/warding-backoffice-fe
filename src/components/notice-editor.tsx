@@ -121,9 +121,19 @@ export function NoticeEditor({ value, onChange, uploadImage }: Props) {
     editorProps: {
       handlePaste: (_view, event) => {
         const files = [...(event.clipboardData?.files ?? [])];
-        if (!files.some((f) => f.type.startsWith("image/"))) return false;
-        if (editor) insertImageFiles(editor, files);
-        return true;
+        if (files.some((f) => f.type.startsWith("image/"))) {
+          if (editor) insertImageFiles(editor, files);
+          return true;
+        }
+        // 마크다운 꼴 텍스트는 HTML 붙여넣기(채팅·웹에서 복사)여도 평문을 md 로 파싱.
+        // transformPastedText 는 평문 경로에만 작동해서 이 가드가 없으면 \## 리터럴로 들어간다.
+        const text = event.clipboardData?.getData("text/plain") ?? "";
+        if (/^(#{1,3}\s|[-*]\s|!\[|\d+\.\s)/m.test(text)) {
+          // tiptap-markdown 이 insertContent 를 md 파서로 감싸두었다.
+          editor?.commands.insertContent(text);
+          return true;
+        }
+        return false;
       },
       handleDrop: (_view, event) => {
         const files = [...(event.dataTransfer?.files ?? [])];
