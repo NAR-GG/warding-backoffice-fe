@@ -69,7 +69,8 @@ function NoticeForm({ notice }: { notice: Notice | null }) {
     };
     const done = {
       onSuccess: () => {
-        invalidate({ resource: "notices", invalidates: ["list"] });
+        // detail 도 비워야 조회 페이지가 수정 전 캐시를 보여주지 않는다.
+        invalidate({ resource: "notices", invalidates: ["list", "detail"] });
         navigate("/notices");
       },
     };
