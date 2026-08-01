@@ -85,7 +85,9 @@ export const noticeExtensions = () => [
   }),
   Link.configure({ openOnClick: false }),
   ResizableImage,
-  Markdown.configure({ linkify: true }),
+  // transformPastedText: 마크다운 텍스트를 붙여넣으면 서식으로 변환 —
+  // 평문 붙여넣기 시 ## 이 리터럴(\##)로 저장되는 사고 방지.
+  Markdown.configure({ linkify: true, transformPastedText: true, transformCopiedText: true }),
 ];
 
 // 공지 본문 WYSIWYG 에디터 (Orca 스타일: 상단 툴바 + 인라인 렌더링).
