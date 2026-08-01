@@ -22,9 +22,37 @@ import {
 } from "@/components/ui/select";
 import { API_URL } from "@/providers/constants";
 import { getToken } from "@/providers/auth";
+import { http } from "@/providers/data";
 import type { Player } from "./list";
 
 export type GameAccount = { region: string; riotId: string; tier: string | null };
+
+// GET /api/admin/riot-accounts/verify 응답 — 저장 전 계정 확인용(서버는 아무것도 저장하지 않음).
+type Verification = {
+  accountFound: boolean;
+  summonerFound: boolean;
+  gameName: string | null;
+  tagLine: string | null;
+  platform: string;
+  summonerLevel: number | null;
+  soloTier: string | null;
+  soloRank: string | null;
+  soloLeaguePoints: number | null;
+  soloWins: number | null;
+  soloLosses: number | null;
+  opggUrl: string;
+  message: string | null;
+};
+
+// 검증 결과 한 줄 요약. 예: "Lv.1171 · CHALLENGER I 2003LP (106승 66패)"
+function summarize(v: Verification): string {
+  if (!v.accountFound) return "계정 없음";
+  if (!v.summonerFound) return `${v.platform} 기록 없음`;
+  const level = v.summonerLevel != null ? `Lv.${v.summonerLevel}` : "";
+  if (!v.soloTier) return [level, "언랭"].filter(Boolean).join(" · ");
+  const record = v.soloWins != null ? ` (${v.soloWins}승 ${v.soloLosses}패)` : "";
+  return `${level} · ${v.soloTier} ${v.soloRank ?? ""} ${v.soloLeaguePoints ?? 0}LP${record}`;
+}
 
 // players.game_accounts raw JSON 파싱. 형식이 깨져 있으면 빈 배열(수정 시 새로 작성).
 export function parseGameAccounts(raw: string | null): GameAccount[] {
@@ -75,6 +103,9 @@ export function PlayerEditDialog({ player }: { player: Player }) {
   const [unlockAccounts, setUnlockAccounts] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // 계정 행 index → 검증 결과. 입력이 바뀌면 해당 행 결과를 버린다(과거 결과로 착각 방지).
+  const [verified, setVerified] = useState<Record<number, Verification | string>>({});
+  const [verifying, setVerifying] = useState<number | null>(null);
 
   const { mutate, mutation } = useUpdate();
   const invalidate = useInvalidate();
@@ -126,11 +157,35 @@ export function PlayerEditDialog({ player }: { player: Player }) {
       setAccounts(parseGameAccounts(player.gameAccounts));
       setUnlockAccounts(false);
       setUploadError(null);
+      setVerified({});
+      setVerifying(null);
     }
   };
 
-  const setAccountField = (i: number, field: "region" | "riotId", value: string) =>
+  const setAccountField = (i: number, field: "region" | "riotId", value: string) => {
     setAccounts((prev) => prev.map((a, idx) => (idx === i ? { ...a, [field]: value } : a)));
+    setVerified((prev) => {
+      if (!(i in prev)) return prev;
+      const next = { ...prev };
+      delete next[i];
+      return next;
+    });
+  };
+
+  // 저장 전 확인: Riot 계정 실존·지역·레벨·티어를 그 자리에서 조회한다(저장 안 함).
+  const verify = async (i: number) => {
+    const acc = accounts[i];
+    setVerifying(i);
+    try {
+      const params = new URLSearchParams({ riotId: acc.riotId.trim(), region: acc.region.trim() });
+      const result: Verification = await http("/api/admin/riot-accounts/verify", params);
+      setVerified((prev) => ({ ...prev, [i]: result }));
+    } catch (e) {
+      setVerified((prev) => ({ ...prev, [i]: e instanceof Error ? e.message : "검증 실패" }));
+    } finally {
+      setVerifying(null);
+    }
+  };
 
   // 변경분만 모아 payload 구성 — 아무것도 안 바꿨으면 저장 비활성.
   const initialAccounts = JSON.stringify(parseGameAccounts(player.gameAccounts));
@@ -260,29 +315,77 @@ export function PlayerEditDialog({ player }: { player: Player }) {
         {/* 솔랭 계정 */}
         <div className="space-y-2 border-t pt-4">
           <Label>솔랭 계정</Label>
-          {accounts.map((acc, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Input
-                className="w-16"
-                value={acc.region}
-                onChange={(e) => setAccountField(i, "region", e.target.value)}
-                placeholder="KR"
-              />
-              <Input
-                value={acc.riotId}
-                onChange={(e) => setAccountField(i, "riotId", e.target.value)}
-                placeholder="이름#태그"
-              />
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="계정 삭제"
-                onClick={() => setAccounts((prev) => prev.filter((_, idx) => idx !== i))}
-              >
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
+          {accounts.map((acc, i) => {
+            const result = verified[i];
+            const rowValid = acc.region.trim() && /^.+#.+$/.test(acc.riotId.trim());
+            return (
+              <div key={i} className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Input
+                    className="w-16"
+                    value={acc.region}
+                    onChange={(e) => setAccountField(i, "region", e.target.value)}
+                    placeholder="KR"
+                  />
+                  <Input
+                    value={acc.riotId}
+                    onChange={(e) => setAccountField(i, "riotId", e.target.value)}
+                    placeholder="이름#태그"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!rowValid || verifying === i}
+                    onClick={() => verify(i)}
+                  >
+                    {verifying === i ? "확인 중…" : "검증"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="계정 삭제"
+                    onClick={() => {
+                      setAccounts((prev) => prev.filter((_, idx) => idx !== i));
+                      setVerified({});
+                    }}
+                  >
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
+                {result !== undefined && (
+                  <p
+                    className={
+                      typeof result === "string" || !result.accountFound || !result.summonerFound
+                        ? "pl-1 text-xs text-destructive"
+                        : "pl-1 text-xs text-muted-foreground"
+                    }
+                  >
+                    {typeof result === "string" ? (
+                      result
+                    ) : (
+                      <>
+                        {summarize(result)}
+                        {result.message && ` — ${result.message}`}
+                        {result.opggUrl && (
+                          <>
+                            {" · "}
+                            <a
+                              href={result.opggUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline"
+                            >
+                              op.gg
+                            </a>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+            );
+          })}
           <Button
             variant="outline"
             size="sm"

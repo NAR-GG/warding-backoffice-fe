@@ -6,7 +6,7 @@ import { getToken } from "./auth";
 // 목록: GET /api/admin/{resource}?page=0&size=20&sort=field,asc → Spring Page { content, totalElements }
 // cron 처럼 페이징 없는 배열 응답도 그대로 흡수.
 
-const http = async (
+export const http = async (
   path: string,
   search?: URLSearchParams,
   init?: { method: string; body: unknown }
