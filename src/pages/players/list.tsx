@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTable } from "@refinedev/core";
 import { Lock } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
@@ -25,20 +24,23 @@ export type Player = {
 };
 
 export const PlayerList = () => {
-  const [league, setLeague] = useState("LCK"); // 기본 LCK — 리그가 많아 초기 화면을 좁힌다
-  // 기본 정렬: 선수명 가나다/알파벳순
-  const { result, tableQuery, sorters, setSorters, setFilters, currentPage, setCurrentPage, pageCount } =
+  // 기본 정렬: 선수명 가나다/알파벳순. 기본 리그 LCK — 리그가 많아 초기 화면을 좁힌다.
+  const { result, tableQuery, sorters, setSorters, filters, setFilters, currentPage, setCurrentPage, pageCount } =
     useTable<Player>({
       resource: "players",
       sorters: { initial: [{ field: "name", order: "asc" }] },
       filters: { initial: [{ field: "league", operator: "eq", value: "LCK" }] },
     });
 
-  const changeLeague = (next: string) => {
-    setLeague(next);
-    // "merge": 리그 필터만 교체하고 q(검색) 필터는 유지
+  // 콤보박스 표시값은 로컬 state 가 아니라 실제 필터에서 읽는다. syncWithLocation 이 켜져 있어
+  // URL 이 필터의 소유자인데, 로컬 state 로 라벨을 그리면 "리그 전체"로 검색한 URL 을 다시 열었을 때
+  // 라벨만 LCK 로 남아 전체 결과를 LCK 결과로 착각한다(실제로 그렇게 오독했다).
+  const league =
+    (filters.find((f) => "field" in f && f.field === "league")?.value as string | undefined) ?? "";
+
+  // "merge": 리그 필터만 교체하고 q(검색) 필터는 유지
+  const changeLeague = (next: string) =>
     setFilters([{ field: "league", operator: "eq", value: next }], "merge");
-  };
 
   // 수정 버튼은 모든 리그에 노출한다 — 솔랭 계정 부착은 LCK 이력이 없어도 가능하기 때문
   // (LCK CL·해외 선수 추가 요청이 이 경로로 들어온다). 팀 이동·잠금 해제는 여전히 LCK 한정이고
