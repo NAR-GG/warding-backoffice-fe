@@ -26,6 +26,8 @@ import {
   SubscriptionDetail,
   TeamSubscriptionList,
   TeamSubscriptionDetail,
+  MatchSubscriptionList,
+  MatchSubscriptionDetail,
 } from "./pages/subscriptions";
 import { ErrorPage } from "./pages/error";
 import { authProvider } from "./providers/auth";
@@ -85,12 +87,14 @@ function App() {
                   <Route path="/members" element={<MemberList />} />
                   <Route path="/members/:id" element={<MemberDetailPage />} />
                   <Route path="/players" element={<PlayerList />} />
-                  {/* 구독: 선수/팀 탭. 루트는 선수 탭으로 리다이렉트 */}
+                  {/* 구독: 선수/팀/경기 탭. 루트는 선수 탭으로 리다이렉트 */}
                   <Route path="/subscriptions" element={<Navigate to="/subscriptions/players" replace />} />
                   <Route path="/subscriptions/players" element={<SubscriptionList />} />
                   <Route path="/subscriptions/players/:playerId" element={<SubscriptionDetail />} />
                   <Route path="/subscriptions/teams" element={<TeamSubscriptionList />} />
                   <Route path="/subscriptions/teams/:teamId" element={<TeamSubscriptionDetail />} />
+                  <Route path="/subscriptions/matches" element={<MatchSubscriptionList />} />
+                  <Route path="/subscriptions/matches/:matchId" element={<MatchSubscriptionDetail />} />
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/ratings" element={<RatingList />} />
                   <Route path="/notices" element={<NoticeList />} />
