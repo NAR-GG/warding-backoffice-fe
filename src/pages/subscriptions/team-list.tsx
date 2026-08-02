@@ -1,7 +1,7 @@
 import { useTable } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import { DataTable, type Column } from "@/components/data-table";
-import { resolveImageUrl } from "../players/edit-dialogs";
+import { EntityAvatar } from "@/components/entity-avatar";
 import { SubscriptionTabs } from "./tabs";
 
 // 구독 가능한 팀 + 구독자 수(백엔드에서 인기순 정렬 고정).
@@ -26,16 +26,7 @@ export const TeamSubscriptionList = () => {
     {
       key: "imageUrl",
       title: "이미지",
-      render: (row) =>
-        row.imageUrl ? (
-          <img
-            src={resolveImageUrl(row.imageUrl) ?? undefined}
-            alt={row.teamName}
-            className="size-8 rounded-full object-cover"
-          />
-        ) : (
-          <span className="size-8 rounded-full bg-muted inline-block" />
-        ),
+      render: (row) => <EntityAvatar src={row.imageUrl} name={row.teamName} square />,
     },
     { key: "teamName", title: "팀명" },
     { key: "teamCode", title: "코드", render: (row) => row.teamCode ?? "-" },

@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { API_URL } from "@/providers/constants";
+import { EntityAvatar } from "@/components/entity-avatar";
 import { getToken } from "@/providers/auth";
 import { http } from "@/providers/data";
 import type { Player } from "./list";
@@ -84,12 +85,6 @@ export function displayRiotIds(raw: string | null): string[] {
     ...accounts.filter((a) => a.region !== "KR"),
   ];
   return sorted.map((a) => formatRiotId(a.riotId)).filter(Boolean);
-}
-
-// DB의 선수 이미지는 상대경로(/images/players/…) — 백엔드가 서빙하므로 API 호스트를 붙인다.
-export function resolveImageUrl(url: string | null): string | null {
-  if (!url) return null;
-  return url.startsWith("/") ? `${API_URL}${url}` : url;
 }
 
 // 선수 통합 수정 다이얼로그: 소속팀·이미지·솔랭 계정을 한 모달에서 수정.
@@ -307,15 +302,11 @@ export function PlayerEditDialog({ player }: { player: Player }) {
         <div className="space-y-2 border-t pt-4">
           <Label htmlFor={`image-url-${player.id}`}>이미지 URL</Label>
           <div className="flex items-center gap-3">
-            {url.trim() ? (
-              <img
-                src={resolveImageUrl(url.trim()) ?? undefined}
-                alt={player.name}
-                className="size-14 rounded-full object-cover border shrink-0"
-              />
-            ) : (
-              <div className="size-14 rounded-full border bg-muted shrink-0" />
-            )}
+            <EntityAvatar
+              src={url.trim() || null}
+              name={player.name}
+              className="size-14 shrink-0 border"
+            />
             <Input
               id={`image-url-${player.id}`}
               value={url}

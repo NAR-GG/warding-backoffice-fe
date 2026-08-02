@@ -99,7 +99,7 @@ const columns: Column<Rating>[] = [
     key: "rating",
     title: "별점",
     sortable: true,
-    render: (row) => <span className="whitespace-nowrap">{"★".repeat(row.rating)}</span>,
+    render: (row) => <span className="tabular-nums">{row.rating} / 5</span>,
   },
   {
     key: "comment",
@@ -193,7 +193,7 @@ export const RatingList = () => {
                 <SelectItem value={ALL}>별점 전체</SelectItem>
                 {RATINGS.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {"★".repeat(Number(r))}
+                    {r}점
                   </SelectItem>
                 ))}
               </SelectContent>

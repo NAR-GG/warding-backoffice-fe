@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Layout } from "./components/layout";
 import { ThemeProvider } from "./components/theme-provider";
 import { Login, OAuthCallback } from "./pages/auth";
-import { MemberList } from "./pages/members";
+import { MemberDetailPage, MemberList } from "./pages/members";
 import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
 import { CronJobList } from "./pages/cron-jobs";
@@ -44,7 +44,7 @@ function App() {
               routerProvider={routerProvider}
               dataProvider={dataProvider}
               resources={[
-                { name: "members", list: "/members", meta: { label: "가입자" } },
+                { name: "members", list: "/members", show: "/members/:id", meta: { label: "가입자" } },
                 { name: "players", list: "/players", meta: { label: "선수" } },
                 { name: "subscriptions", list: "/subscriptions", meta: { label: "구독" } },
                 { name: "teams", list: "/teams", meta: { label: "팀" } },
@@ -83,6 +83,7 @@ function App() {
                 >
                   <Route index element={<NavigateToResource resource="members" />} />
                   <Route path="/members" element={<MemberList />} />
+                  <Route path="/members/:id" element={<MemberDetailPage />} />
                   <Route path="/players" element={<PlayerList />} />
                   {/* 구독: 선수/팀 탭. 루트는 선수 탭으로 리다이렉트 */}
                   <Route path="/subscriptions" element={<Navigate to="/subscriptions/players" replace />} />

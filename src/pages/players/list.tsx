@@ -3,11 +3,8 @@ import { Lock } from "lucide-react";
 import { DataTable, type Column } from "@/components/data-table";
 import { LeagueSelect } from "@/components/league-select";
 import { DeleteRowButton } from "@/components/delete-row-button";
-import {
-  PlayerEditDialog,
-  displayRiotIds,
-  resolveImageUrl,
-} from "./edit-dialogs";
+import { EntityAvatar } from "@/components/entity-avatar";
+import { PlayerEditDialog, displayRiotIds } from "./edit-dialogs";
 
 export type Player = {
   id: number;
@@ -52,15 +49,7 @@ export const PlayerList = () => {
       title: "이미지",
       render: (row) => (
         <span className="flex items-center gap-1">
-          {row.imageUrl ? (
-            <img
-              src={resolveImageUrl(row.imageUrl) ?? undefined}
-              alt={row.name}
-              className="size-8 rounded-full object-cover"
-            />
-          ) : (
-            <span className="size-8 rounded-full bg-muted inline-block" />
-          )}
+          <EntityAvatar src={row.imageUrl} name={row.name} />
           {row.imageLocked && <Lock className="size-3 text-muted-foreground" aria-label="수동 고정" />}
         </span>
       ),
