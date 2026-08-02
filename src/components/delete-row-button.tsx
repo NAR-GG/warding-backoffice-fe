@@ -18,10 +18,13 @@ export function DeleteRowButton({
   resource,
   id,
   label,
+  onSuccess,
 }: {
   resource: string;
   id: number | string;
   label: string;
+  // 삭제 성공 후 후처리(상세 페이지에서 목록으로 되돌아가기 등).
+  onSuccess?: () => void;
 }) {
   // useDelete()는 { mutate, mutateAsync, mutation, ... } 반환 (Refine v5 + TanStack Query v5)
   // mutation.isPending은 TanStack Query v5에서 지원됨
@@ -45,16 +48,19 @@ export function DeleteRowButton({
           <AlertDialogCancel>취소</AlertDialogCancel>
           <AlertDialogAction
             onClick={() =>
-              mutate({
-                resource,
-                id,
-                successNotification: () => ({ message: "삭제 완료", type: "success" }),
-                errorNotification: (error) => ({
-                  message: "삭제 실패",
-                  description: error?.message ?? "잠시 후 다시 시도해 주세요",
-                  type: "error",
-                }),
-              })
+              mutate(
+                {
+                  resource,
+                  id,
+                  successNotification: () => ({ message: "삭제 완료", type: "success" }),
+                  errorNotification: (error) => ({
+                    message: "삭제 실패",
+                    description: error?.message ?? "잠시 후 다시 시도해 주세요",
+                    type: "error",
+                  }),
+                },
+                { onSuccess: () => onSuccess?.() }
+              )
             }
           >
             삭제
