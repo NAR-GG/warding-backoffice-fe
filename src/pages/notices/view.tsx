@@ -55,6 +55,7 @@ export const NoticeView = () => {
             </span>
           )}
           <span>등록 {fmtDateTime(result.createdAt)}</span>
+          <span>조회 {result.viewCount?.toLocaleString() ?? "-"}</span>
         </div>
       </div>
 
