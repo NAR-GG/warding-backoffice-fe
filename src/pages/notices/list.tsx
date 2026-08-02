@@ -22,6 +22,8 @@ export type Notice = {
   // null 이면 임시저장(앱 미노출).
   publishedAt: string | null;
   createdAt: string;
+  // 앱이 공지를 열 때 POST /api/notices/{id}/view 로 +1. 중복 제거 없는 총 열람 수.
+  viewCount: number;
 };
 
 const fmtDate = (iso: string | null) => (iso ? iso.slice(0, 10).replaceAll("-", ".") : "");
@@ -73,6 +75,14 @@ export const NoticeList = () => {
             임시저장
           </span>
         ),
+    },
+    {
+      key: "viewCount",
+      title: "조회수",
+      tooltip: "앱에서 공지를 연 총 횟수(중복 제거 없음). 임시저장 공지는 앱에 안 나가므로 0입니다.",
+      render: (row) => (
+        <span className="tabular-nums">{row.viewCount?.toLocaleString() ?? "-"}</span>
+      ),
     },
     {
       key: "createdAt",
