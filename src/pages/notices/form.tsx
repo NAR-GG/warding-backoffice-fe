@@ -62,7 +62,9 @@ function NoticeForm({ notice }: { notice: Notice | null }) {
   const save = (published: boolean) => {
     const values = {
       title: title.trim(),
-      content: content.trim(),
+      // 에디터(tiptap-markdown)는 줄바꿈을 `\`+개행으로 직렬화하는데 앱 렌더러는 그
+      // `\` 를 본문 글자로 그린다 → 저장 직전에 순수 개행으로. 옛 공지도 재저장하면 정리됨.
+      content: content.trim().replace(/\\\n/g, "\n"),
       pinned,
       promoteUntil: banner && promoteUntil ? promoteUntil : null,
       published,

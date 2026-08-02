@@ -87,7 +87,14 @@ export const noticeExtensions = () => [
   ResizableImage,
   // transformPastedText: 마크다운 텍스트를 붙여넣으면 서식으로 변환 —
   // 평문 붙여넣기 시 ## 이 리터럴(\##)로 저장되는 사고 방지.
-  Markdown.configure({ linkify: true, transformPastedText: true, transformCopiedText: true }),
+  // breaks: 한 줄 개행을 줄바꿈으로 되읽는다 — 저장 시 `\` 를 떼고(notices/form.tsx)
+  // 순수 개행으로 내보내므로, 다시 열었을 때 줄바꿈이 공백으로 뭉개지지 않게 하는 짝.
+  Markdown.configure({
+    linkify: true,
+    breaks: true,
+    transformPastedText: true,
+    transformCopiedText: true,
+  }),
 ];
 
 // 공지 본문 WYSIWYG 에디터 (Orca 스타일: 상단 툴바 + 인라인 렌더링).
