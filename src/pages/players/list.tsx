@@ -40,9 +40,9 @@ export const PlayerList = () => {
     setFilters([{ field: "league", operator: "eq", value: next }], "merge");
   };
 
-  // 수정(팀/이미지)은 LCK 선수 한정. UI 는 리그 필터가 LCK 일 때만 노출하고, 서버도 재검증한다.
-  const editable = league === "LCK";
-
+  // 수정 버튼은 모든 리그에 노출한다 — 솔랭 계정 부착은 LCK 이력이 없어도 가능하기 때문
+  // (LCK CL·해외 선수 추가 요청이 이 경로로 들어온다). 팀 이동·잠금 해제는 여전히 LCK 한정이고
+  // 서버가 재검증하므로, 다이얼로그가 변경 내용에 따라 호출 경로를 고른다.
   const columns: Column<Player>[] = [
     { key: "id", title: "ID", sortable: true },
     {
@@ -92,7 +92,7 @@ export const PlayerList = () => {
       title: "관리",
       render: (row) => (
         <span className="flex items-center">
-          {editable && <PlayerEditDialog player={row} />}
+          <PlayerEditDialog player={row} />
           <DeleteRowButton resource="players" id={row.id} label={row.name} />
         </span>
       ),

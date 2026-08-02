@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useInvalidate, useList, useUpdate } from "@refinedev/core";
 import { Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,6 +107,7 @@ export function PlayerEditDialog({ player }: { player: Player }) {
   // 계정 행 index → 검증 결과. 입력이 바뀌면 해당 행 결과를 버린다(과거 결과로 착각 방지).
   const [verified, setVerified] = useState<Record<number, Verification | string>>({});
   const [verifying, setVerifying] = useState<number | null>(null);
+  const [attaching, setAttaching] = useState(false);
 
   const { mutate, mutation } = useUpdate();
   const invalidate = useInvalidate();
@@ -206,24 +208,65 @@ export function PlayerEditDialog({ player }: { player: Player }) {
       tier: a.tier,
     }));
 
+  // PUT /players/{id} 는 LCK 출전 이력 게이트에 막힌다 — LCK CL·해외 선수는 통과 못 한다.
+  // 계정 1개를 붙이거나 갈아끼우는 변경뿐이면 게이트가 없는 POST /players/{id}/solo-rank-account 로 보낸다.
+  // 이 경로는 game_accounts 를 그 계정 하나로 통째 덮어쓰므로 다계정 편집엔 쓰지 않고, 팀 이동·잠금
+  // 해제처럼 attach 가 다루지 않는 변경이 섞이면 기존 PUT 으로 되돌린다(서버가 LCK 여부를 판정).
+  const attachAccounts = payload.gameAccounts as GameAccount[] | undefined;
+  const useAttachPath =
+    attachAccounts?.length === 1 &&
+    payload.currentTeamId === undefined &&
+    payload.unlockImage === undefined &&
+    payload.unlockGameAccounts === undefined;
+
   const invalidAccounts = accountsChanged && !unlockAccounts && !accountsValid;
-  const canSave = Object.keys(payload).length > 0 && !invalidAccounts && !mutation.isPending;
+  const canSave =
+    Object.keys(payload).length > 0 && !invalidAccounts && !mutation.isPending && !attaching;
+
+  const attach = async () => {
+    const [acc] = attachAccounts!;
+    setAttaching(true);
+    try {
+      const updated: Player = await http(
+        `/api/admin/players/${player.id}/solo-rank-account`,
+        undefined,
+        {
+          method: "POST",
+          body: { riotId: acc.riotId, region: acc.region, imageUrl: payload.imageUrl ?? null },
+        }
+      );
+      // 엉뚱한 선수에게 붙었는지 응답으로 확인 — 되돌리는 API가 없어 사후 정정이 어렵다.
+      toast.success("저장 완료", {
+        description: `${updated.name}${updated.currentTeamName ? ` (${updated.currentTeamName})` : ""} · ${acc.riotId}`,
+      });
+      invalidate({ resource: "players", invalidates: ["list"] });
+      setOpen(false);
+    } catch (e) {
+      toast.error("저장 실패", {
+        description: e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요",
+      });
+    } finally {
+      setAttaching(false);
+    }
+  };
 
   const save = () =>
-    mutate(
-      {
-        resource: "players",
-        id: player.id,
-        values: payload,
-        successNotification: () => ({ message: "저장 완료", type: "success" }),
-        errorNotification: (error) => ({
-          message: "저장 실패",
-          description: error?.message ?? "잠시 후 다시 시도해 주세요",
-          type: "error",
-        }),
-      },
-      { onSuccess: () => setOpen(false) }
-    );
+    useAttachPath
+      ? attach()
+      : mutate(
+          {
+            resource: "players",
+            id: player.id,
+            values: payload,
+            successNotification: () => ({ message: "저장 완료", type: "success" }),
+            errorNotification: (error) => ({
+              message: "저장 실패",
+              description: error?.message ?? "잠시 후 다시 시도해 주세요",
+              type: "error",
+            }),
+          },
+          { onSuccess: () => setOpen(false) }
+        );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -253,7 +296,8 @@ export function PlayerEditDialog({ player }: { player: Player }) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            과거 경기 기록·통계에는 영향 없음. 자동 동기화가 덮어쓰지 않음.
+            과거 경기 기록·통계에는 영향 없음. 자동 동기화가 덮어쓰지 않음. LCK 출전 이력이 있는
+            선수만 변경할 수 있음(LCK CL·해외 선수는 솔랭 계정·이미지만 수정 가능).
           </p>
         </div>
 
@@ -400,6 +444,12 @@ export function PlayerEditDialog({ player }: { player: Player }) {
             저장 시 Riot 계정 실존 확인(없는 아이디 거부) 후 랭크 추적에 즉시 반영. 저장 후엔 잠겨서
             크롤러가 되돌리지 않음.
           </p>
+          {useAttachPath && (
+            <p className="text-xs text-muted-foreground">
+              계정 부착 전용 저장 — LCK 이력이 없는 선수도 저장됨. 저장 후 토스트에 반영된 선수명·팀이
+              뜨니 의도한 선수인지 확인할 것.
+            </p>
+          )}
           {player.gameAccountsLocked && (
             <div className="flex items-center gap-2">
               <Checkbox
@@ -416,7 +466,7 @@ export function PlayerEditDialog({ player }: { player: Player }) {
 
         <DialogFooter>
           <Button disabled={!canSave} onClick={save}>
-            저장
+            {attaching || mutation.isPending ? "저장 중…" : "저장"}
           </Button>
         </DialogFooter>
       </DialogContent>
