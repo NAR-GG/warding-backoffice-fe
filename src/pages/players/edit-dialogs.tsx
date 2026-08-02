@@ -285,7 +285,9 @@ export function PlayerEditDialog({ player }: { player: Player }) {
           <Label>소속팀</Label>
           <Select value={teamId} onValueChange={setTeamId}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="팀 선택" />
+              {/* 옵션은 LCK 팀뿐이라 LCK CL·해외 선수는 현재 팀이 목록에 없다. 그대로 두면 빈칸으로
+                  보여 "소속팀 없음"으로 오해된다 — placeholder 로 현재 팀명을 대신 띄운다. */}
+              <SelectValue placeholder={player.currentTeamName ?? "팀 선택"} />
             </SelectTrigger>
             <SelectContent>
               {(teams?.data ?? []).map((t) => (
