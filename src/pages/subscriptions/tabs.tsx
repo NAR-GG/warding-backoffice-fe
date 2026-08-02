@@ -1,6 +1,6 @@
 import { NavLink } from "react-router";
 
-// 구독 페이지 상단 선수/팀 전환 탭. URL 기반이라 상태 없음.
+// 구독 페이지 상단 선수/팀/경기 전환 탭. URL 기반이라 상태 없음.
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   `rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
     isActive
@@ -15,6 +15,9 @@ export const SubscriptionTabs = () => (
     </NavLink>
     <NavLink to="/subscriptions/teams" className={tabClass}>
       팀
+    </NavLink>
+    <NavLink to="/subscriptions/matches" className={tabClass}>
+      경기
     </NavLink>
   </nav>
 );
