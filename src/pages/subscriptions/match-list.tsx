@@ -1,6 +1,14 @@
+import { useState } from "react";
 import { useTable } from "@refinedev/core";
 import { useNavigate } from "react-router";
 import { DataTable, type Column } from "@/components/data-table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SubscriptionTabs } from "./tabs";
 
 // 구독자가 1명 이상인 경기 + 구독자 수(백엔드에서 인기순 정렬 고정).
@@ -22,14 +30,23 @@ const STATE_LABEL: Record<string, string> = {
   completed: "종료",
 };
 
+const ALL = "all";
+
 export const MatchSubscriptionList = () => {
   const navigate = useNavigate();
+  const [state, setState] = useState(ALL);
   // 정렬은 서버 고정(구독자 수 desc)이라 sorters 미지정.
   const { result, tableQuery, setFilters, currentPage, setCurrentPage, pageCount } =
     useTable<SubscribedMatch>({
       resource: "subscriptions/matches",
       pagination: { pageSize: 20 },
     });
+
+  const changeState = (next: string) => {
+    setState(next);
+    // 빈 값이면 dataProvider 가 파라미터를 빼므로 "전체"는 빈 문자열로 보낸다
+    setFilters([{ field: "state", operator: "eq", value: next === ALL ? "" : next }], "merge");
+  };
 
   const columns: Column<SubscribedMatch>[] = [
     {
@@ -79,6 +96,21 @@ export const MatchSubscriptionList = () => {
         pagination={{ currentPage, pageCount, setCurrentPage }}
         onSearch={(q) => setFilters([{ field: "q", operator: "contains", value: q }], "merge")}
         searchPlaceholder="경기명·팀명 검색"
+        filterSlot={
+          <Select value={state} onValueChange={changeState}>
+            <SelectTrigger size="sm" className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>상태 전체</SelectItem>
+              {Object.entries(STATE_LABEL).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
         onRowClick={(row) =>
           // 대진명을 쿼리로 전달 → 새로고침·직접 접근에도 유지(navigation state는 소실됨).
           navigate(
