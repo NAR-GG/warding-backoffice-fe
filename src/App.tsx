@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Layout } from "./components/layout";
 import { ThemeProvider } from "./components/theme-provider";
 import { Login, OAuthCallback } from "./pages/auth";
+import { Dashboard } from "./pages/dashboard";
 import { MemberDetailPage, MemberList } from "./pages/members";
 import { PlayerList } from "./pages/players";
 import { TeamList } from "./pages/teams";
@@ -46,6 +47,7 @@ function App() {
               routerProvider={routerProvider}
               dataProvider={dataProvider}
               resources={[
+                { name: "dashboard", list: "/dashboard", meta: { label: "대시보드" } },
                 { name: "members", list: "/members", show: "/members/:id", meta: { label: "가입자" } },
                 { name: "players", list: "/players", meta: { label: "선수" } },
                 { name: "subscriptions", list: "/subscriptions", meta: { label: "구독" } },
@@ -83,7 +85,8 @@ function App() {
                     </Authenticated>
                   }
                 >
-                  <Route index element={<NavigateToResource resource="members" />} />
+                  <Route index element={<NavigateToResource resource="dashboard" />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/members" element={<MemberList />} />
                   <Route path="/members/:id" element={<MemberDetailPage />} />
                   <Route path="/players" element={<PlayerList />} />
@@ -110,7 +113,7 @@ function App() {
                 <Route
                   element={
                     <Authenticated key="auth-pages" fallback={<Outlet />}>
-                      <NavigateToResource resource="members" />
+                      <NavigateToResource resource="dashboard" />
                     </Authenticated>
                   }
                 >
