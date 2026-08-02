@@ -92,6 +92,8 @@ export const Dashboard = () => {
   const {
     isLoading,
     isError,
+    isNotificationLoading,
+    isNotificationError,
     hourly,
     compareLabel,
     signupRows,
@@ -207,7 +209,17 @@ export const Dashboard = () => {
         >
           <SubscriptionChart data={subs} />
         </Panel>
-        <Panel title={hourly ? "시간대별 알림 발송" : "일별 알림 발송"} desc="인앱 알림 생성 건수">
+        <Panel
+          title={hourly ? "시간대별 알림 발송" : "일별 알림 발송"}
+          desc={
+            isNotificationLoading
+              ? "인앱 알림 생성 건수 · 불러오는 중…"
+              : isNotificationError
+                ? "인앱 알림 생성 건수 · 불러오지 못했습니다"
+                : "인앱 알림 생성 건수"
+          }
+        >
+          {/* 알림 집계만 초 단위로 걸려서 이 카드는 늦게 채워진다(빈 차트 → 데이터). */}
           <NotificationChart data={pushes} />
         </Panel>
       </div>

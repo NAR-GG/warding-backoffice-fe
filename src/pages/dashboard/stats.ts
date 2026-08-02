@@ -5,8 +5,10 @@ import type { SignupRow } from "./signup-chart";
  * 대시보드 데이터. 백엔드는 값이 있는 **1시간 버킷만** 내려주므로(sparse)
  * 빈 시간 채우기 · 일별 합산 · 24시간 롤링 윈도 조립은 전부 여기서 한다.
  *
- * GET /api/admin/stats/series?days=N — 가입·구독·알림 시간 버킷
- * GET /api/admin/stats/overview      — 퍼널 4단계 + 관심 리그·구독 TOP 10
+ * GET /api/admin/stats/series?days=N        — 가입·구독 시간 버킷
+ * GET /api/admin/stats/notifications?days=N — 알림 발송량. 35만 행 집계라 느려서 따로 부른다
+ *                                              (나머지 카드가 먼저 그려지도록)
+ * GET /api/admin/stats/overview             — 퍼널 4단계 + 관심 리그·구독 TOP 10
  */
 
 type HourCount = { bucket: string; count: number };
@@ -17,6 +19,11 @@ type SeriesResponse = {
   bucketUnit: string;
   signups: HourCount[];
   subscriptions: HourSubscription[];
+};
+
+type NotificationsResponse = {
+  from: string;
+  bucketUnit: string;
   notifications: HourCount[];
 };
 
@@ -85,13 +92,18 @@ export function useDashboardStats(range: number) {
     method: "get",
     config: { query: { days } },
   });
+  const notificationSeries = useCustom<NotificationsResponse>({
+    url: "/api/admin/stats/notifications",
+    method: "get",
+    config: { query: { days } },
+  });
   const overview = useCustom<OverviewResponse>({
     url: "/api/admin/stats/overview",
     method: "get",
   });
 
   const signupMap = mapBy(series.result?.data?.signups ?? [], (r) => r.count, (r) => r.bucket);
-  const pushMap = mapBy(series.result?.data?.notifications ?? [], (r) => r.count, (r) => r.bucket);
+  const pushMap = mapBy(notificationSeries.result?.data?.notifications ?? [], (r) => r.count, (r) => r.bucket);
   const subscriptions = series.result?.data?.subscriptions ?? [];
   const subPlayerMap = mapBy(subscriptions, (r) => r.player, (r) => r.bucket);
   const subTeamMap = mapBy(subscriptions, (r) => r.team, (r) => r.bucket);
@@ -156,6 +168,9 @@ export function useDashboardStats(range: number) {
   return {
     isLoading: series.query.isLoading || overview.query.isLoading,
     isError: series.query.isError || overview.query.isError,
+    // 알림만 따로 — 느린 쿼리라 이 카드만 나중에 채워진다.
+    isNotificationLoading: notificationSeries.query.isLoading,
+    isNotificationError: notificationSeries.query.isError,
     hourly,
     compareLabel: hourly ? "24시간 전 같은 시간" : `직전 ${range}일`,
     signupRows,
