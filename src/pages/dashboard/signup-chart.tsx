@@ -1,4 +1,4 @@
-import { Area, AreaChart, CartesianGrid, ReferenceDot, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, ComposedChart, Line, ReferenceDot, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
 
 const config = {
@@ -39,13 +39,14 @@ export function SignupChart({ rows, compareLabel }: { rows: SignupRow[]; compare
 
   return (
     <ChartContainer config={config} className="aspect-auto h-[168px] w-full">
-      <AreaChart data={rows} margin={{ top: 14, right: 10, bottom: 0, left: -18 }}>
-        <CartesianGrid strokeDasharray="2 4" />
+      {/* 카운트 계열이라 막대. 선/영역으로 그리면 점 사이 보간이 "없는 값"을 있는 것처럼 보이게 한다. */}
+      <ComposedChart data={rows} margin={{ top: 14, right: 10, bottom: 0, left: -18 }}>
+        <CartesianGrid vertical={false} strokeDasharray="2 4" />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} minTickGap={24} tick={{ fontSize: 10 }} />
         <YAxis tickLine={false} axisLine={false} width={40} tick={{ fontSize: 10 }} />
         {/* 애니메이션 끔 — 켜두면 툴팁이 왼쪽에서 미끄러져 들어온다 */}
         <ChartTooltip
-          cursor={{ strokeDasharray: "3 3" }}
+          cursor={{ fillOpacity: 0.5 }}
           isAnimationActive={false}
           animationDuration={0}
           content={({ active, payload }) =>
@@ -54,24 +55,17 @@ export function SignupChart({ rows, compareLabel }: { rows: SignupRow[]; compare
             ) : null
           }
         />
-        <Area
+        <Bar dataKey="count" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
+        {/* 비교 구간은 값 자체보다 "지난번보다 위냐 아래냐"를 보는 용도라 선으로 겹친다. */}
+        <Line
           dataKey="prev"
           stroke="var(--muted-foreground)"
-          strokeOpacity={0.5}
-          fill="var(--muted-foreground)"
-          fillOpacity={0.06}
+          strokeOpacity={0.6}
           strokeWidth={1}
+          strokeDasharray="3 3"
           dot={false}
           isAnimationActive={false}
           connectNulls
-        />
-        <Area
-          dataKey="count"
-          stroke="var(--chart-1)"
-          fill="var(--chart-1)"
-          fillOpacity={0.18}
-          strokeWidth={1.5}
-          dot={false}
         />
         {/* 최대값만 숫자로 찍는다 — 전 포인트 라벨링은 금지 */}
         <ReferenceDot
@@ -82,7 +76,7 @@ export function SignupChart({ rows, compareLabel }: { rows: SignupRow[]; compare
           stroke="var(--background)"
           label={{ value: `${peak.count}`, position: "top", fontSize: 10, fill: "var(--foreground)" }}
         />
-      </AreaChart>
+      </ComposedChart>
     </ChartContainer>
   );
 }
