@@ -126,6 +126,18 @@ export const dataProvider: DataProvider = {
     return { data: await http(`/api/admin/${resource}/${id}`) };
   },
 
+  // 리소스 CRUD 밖의 조회(대시보드 집계 등). useCustom 이 이 메서드를 쓴다.
+  custom: async ({ url, method, query }) => {
+    if (method !== "get") {
+      throw new Error(`custom 은 GET 만 지원한다: ${method} ${url}`);
+    }
+    const params = new URLSearchParams();
+    Object.entries(query ?? {}).forEach(([key, value]) => {
+      if (value != null) params.set(key, String(value));
+    });
+    return { data: await http(url, params) };
+  },
+
   getMany: async ({ resource, ids }) => ({
     data: await Promise.all(ids.map((id) => http(`/api/admin/${resource}/${id}`))),
   }),
