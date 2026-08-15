@@ -24,10 +24,10 @@ const axisTick = { fontSize: 10 } as const;
 export function SubscriptionChart({ data }: { data: SubsPoint[] }) {
   return (
     <ChartContainer config={subsConfig} className="aspect-auto h-[168px] w-full">
-      <AreaChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: -18 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 10, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="2 4" />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} minTickGap={24} tick={axisTick} />
-        <YAxis tickLine={false} axisLine={false} width={40} tick={axisTick} />
+        <YAxis tickLine={false} axisLine={false} width="auto" tick={axisTick} />
         <ChartTooltip isAnimationActive={false} animationDuration={0} content={<ChartTooltipContent indicator="dot" />} />
         <ChartLegend content={<ChartLegendContent className="pt-1 text-[11px]" />} />
         <Area dataKey="player" stackId="s" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.7} strokeWidth={1.5} />
@@ -42,10 +42,11 @@ export function NotificationChart({ data }: { data: PushPoint[] }) {
   const peak = data.reduce((a, b) => (b.count > a.count ? b : a), data[0]);
   return (
     <ChartContainer config={pushConfig} className="aspect-auto h-[168px] w-full">
-      <BarChart data={data} margin={{ top: 14, right: 10, bottom: 0, left: -10 }}>
+      <BarChart data={data} margin={{ top: 14, right: 10, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="2 4" />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} minTickGap={24} tick={axisTick} />
-        <YAxis tickLine={false} axisLine={false} width={48} tick={axisTick} />
+        {/* width="auto" — 고정 폭이면 자릿수 늘어날 때 눈금이 잘린다 */}
+        <YAxis tickLine={false} axisLine={false} width="auto" tick={axisTick} />
         <ChartTooltip isAnimationActive={false} animationDuration={0} content={<ChartTooltipContent indicator="dot" />} />
         <Bar dataKey="count" fill="var(--chart-4)" radius={[2, 2, 0, 0]} />
         <ReferenceDot

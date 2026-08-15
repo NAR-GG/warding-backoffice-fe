@@ -40,10 +40,11 @@ export function SignupChart({ rows, compareLabel }: { rows: SignupRow[]; compare
   return (
     <ChartContainer config={config} className="aspect-auto h-[168px] w-full">
       {/* 카운트 계열이라 막대. 선/영역으로 그리면 점 사이 보간이 "없는 값"을 있는 것처럼 보이게 한다. */}
-      <ComposedChart data={rows} margin={{ top: 14, right: 10, bottom: 0, left: -18 }}>
+      <ComposedChart data={rows} margin={{ top: 14, right: 10, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} strokeDasharray="2 4" />
         <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={6} minTickGap={24} tick={{ fontSize: 10 }} />
-        <YAxis tickLine={false} axisLine={false} width={40} tick={{ fontSize: 10 }} />
+        {/* width="auto" — 고정 폭이면 30일 구간의 3자리 눈금이 잘린다 */}
+        <YAxis tickLine={false} axisLine={false} width="auto" tick={{ fontSize: 10 }} />
         {/* 애니메이션 끔 — 켜두면 툴팁이 왼쪽에서 미끄러져 들어온다 */}
         <ChartTooltip
           cursor={{ fillOpacity: 0.5 }}
