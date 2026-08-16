@@ -1,6 +1,6 @@
 import type { DataProvider } from "@refinedev/core";
 import { API_URL } from "./constants";
-import { getToken } from "./auth";
+import { getValidToken } from "./auth";
 
 // Spring Boot REST + Pageable 어댑터 (전체 CRUD).
 // 목록: GET /api/admin/{resource}?page=0&size=20&sort=field,asc → Spring Page { content, totalElements }
@@ -12,7 +12,8 @@ export const http = async (
   init?: { method: string; body: unknown }
 ) => {
   const url = `${API_URL}${path}${search && [...search].length ? `?${search}` : ""}`;
-  const token = getToken();
+  // 만료 임박이면 여기서 refresh 토큰으로 먼저 갱신(30분 access token 수명 흡수).
+  const token = await getValidToken();
   const res = await fetch(url, {
     method: init?.method ?? "GET",
     headers: {

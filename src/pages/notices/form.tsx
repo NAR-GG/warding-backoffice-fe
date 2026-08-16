@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { NoticeEditor } from "@/components/notice-editor";
 import { API_URL } from "@/providers/constants";
-import { getToken } from "@/providers/auth";
+import { getValidToken } from "@/providers/auth";
 import { USE_NOTICE_MOCK } from "@/providers/data";
 import type { Notice } from "./list";
 
@@ -25,7 +25,7 @@ async function uploadImage(file: File): Promise<string> {
   }
   const body = new FormData();
   body.append("file", file);
-  const token = getToken();
+  const token = await getValidToken();
   const res = await fetch(`${API_URL}/api/admin/notices/images`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,

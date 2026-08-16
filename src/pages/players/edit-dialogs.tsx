@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { API_URL } from "@/providers/constants";
 import { EntityAvatar } from "@/components/entity-avatar";
-import { getToken } from "@/providers/auth";
+import { getValidToken } from "@/providers/auth";
 import { http } from "@/providers/data";
 import type { Player } from "./list";
 
@@ -115,9 +115,10 @@ export function PlayerEditDialog({ player }: { player: Player }) {
     try {
       const body = new FormData();
       body.append("file", file);
+      const token = await getValidToken();
       const res = await fetch(`${API_URL}/api/admin/players/${player.id}/image`, {
         method: "POST",
-        headers: { ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body,
       });
       if (!res.ok) {
