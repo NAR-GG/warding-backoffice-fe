@@ -35,6 +35,9 @@ async function uploadImage(file: File): Promise<string> {
   return (await res.json()).url as string;
 }
 
+// 서버(NoticeService)와 같은 규칙: 영문 소문자·숫자·하이픈 40자 이내.
+const SLUG_PATTERN = /^[a-z0-9-]{1,40}$/;
+
 export const NoticeCreate = () => <NoticeForm notice={null} />;
 
 export const NoticeEdit = () => {
@@ -52,12 +55,23 @@ function NoticeForm({ notice }: { notice: Notice | null }) {
   const [pinned, setPinned] = useState(notice?.pinned ?? false);
   const [banner, setBanner] = useState(!!notice?.promoteUntil);
   const [promoteUntil, setPromoteUntil] = useState(notice?.promoteUntil?.slice(0, 10) ?? "");
+  const [slug, setSlug] = useState(notice?.slug ?? "");
+  const [actionUrl, setActionUrl] = useState(notice?.actionUrl ?? "");
 
   const invalidate = useInvalidate();
   const { mutate: create, mutation: creating } = useCreate();
   const { mutate: update, mutation: updating } = useUpdate();
   const busy = creating.isPending || updating.isPending;
-  const valid = title.trim() !== "" && content.trim() !== "" && (!banner || promoteUntil !== "");
+  // 전용 페이지(slug 있음)는 앱 공지 목록·띠배너에 나가지 않아 고정·배너 옵션이 의미가 없다.
+  const isPage = slug.trim() !== "";
+  const slugValid = slug.trim() === "" || SLUG_PATTERN.test(slug.trim());
+  const urlValid = actionUrl.trim() === "" || actionUrl.trim().startsWith("https://");
+  const valid =
+    title.trim() !== "" &&
+    content.trim() !== "" &&
+    (isPage || !banner || promoteUntil !== "") &&
+    slugValid &&
+    urlValid;
 
   const save = (published: boolean) => {
     const values = {
@@ -65,9 +79,13 @@ function NoticeForm({ notice }: { notice: Notice | null }) {
       // 에디터(tiptap-markdown)는 줄바꿈을 `\`+개행으로 직렬화하는데 앱 렌더러는 그
       // `\` 를 본문 글자로 그린다 → 저장 직전에 순수 개행으로. 옛 공지도 재저장하면 정리됨.
       content: content.trim().replace(/\\\n/g, "\n"),
-      pinned,
-      promoteUntil: banner && promoteUntil ? promoteUntil : null,
+      pinned: isPage ? false : pinned,
+      promoteUntil: !isPage && banner && promoteUntil ? promoteUntil : null,
       published,
+      // 빈 문자열은 서버가 "버튼 없음"으로 읽는다(수정 때는 기존 버튼 제거).
+      actionUrl: actionUrl.trim(),
+      // slug 는 생성 때만 서버가 반영한다(수정 요청의 slug 는 무시).
+      slug: notice ? undefined : slug.trim() || null,
     };
     const done = {
       onSuccess: () => {
@@ -110,14 +128,71 @@ function NoticeForm({ notice }: { notice: Notice | null }) {
         </p>
       </div>
 
+      <div className="space-y-4 rounded-lg border p-4">
+        <div>
+          <p className="text-sm font-medium">앱 전용 페이지 (선택)</p>
+          <p className="text-xs text-muted-foreground">
+            앱이 공지 목록이 아니라 전용 화면으로 여는 고정 페이지입니다. 광고 안내는 식별자{" "}
+            <code>ad-guide</code> (앱 마이페이지 › 고객 지원 › 광고 안내).
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="notice-slug">식별자</Label>
+            {notice ? (
+              <p className="flex h-9 items-center text-sm">
+                {notice.slug ? <code>{notice.slug}</code> : <span className="text-muted-foreground">없음 (일반 공지)</span>}
+              </p>
+            ) : (
+              <Input
+                id="notice-slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="ad-guide"
+                aria-invalid={!slugValid}
+              />
+            )}
+            {!slugValid && (
+              <p className="text-xs text-destructive">영문 소문자·숫자·하이픈 40자 이내로 입력하세요.</p>
+            )}
+            {notice?.slug && (
+              <p className="text-xs text-muted-foreground">
+                식별자는 바꿀 수 없고 삭제도 할 수 없습니다. 앱에서 내리려면 임시저장으로 저장하세요.
+              </p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="notice-action-url">하단 고정 버튼 주소</Label>
+            <Input
+              id="notice-action-url"
+              value={actionUrl}
+              onChange={(e) => setActionUrl(e.target.value)}
+              placeholder="https://forms.gle/..."
+              aria-invalid={!urlValid}
+            />
+            {!urlValid ? (
+              <p className="text-xs text-destructive">https:// 로 시작하는 주소만 쓸 수 있습니다.</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                비우면 버튼이 나오지 않습니다. 앱에서 외부 브라우저로 열립니다.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-end gap-6">
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={pinned} onCheckedChange={setPinned} /> 상단 고정
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <Switch checked={banner} onCheckedChange={setBanner} /> 앱 캘린더 띠배너 노출
-        </label>
-        {banner && (
+        {!isPage && (
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={pinned} onCheckedChange={setPinned} /> 상단 고정
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={banner} onCheckedChange={setBanner} /> 앱 캘린더 띠배너 노출
+            </label>
+          </>
+        )}
+        {!isPage && banner && (
           <div className="space-y-1">
             <Label htmlFor="notice-promote-until" className="text-xs">
               배너 종료일
