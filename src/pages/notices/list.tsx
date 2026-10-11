@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 
 // 공지사항 관리. 백엔드:
 //   GET    /api/admin/notices?page&size  → Spring Page (임시저장 포함, 최신순)
-//   POST   /api/admin/notices            body { title, content, pinned, promoteUntil, published }
-//   PUT    /api/admin/notices/{id}       body 동일
+//   POST   /api/admin/notices            body { title, content, pinned, promoteUntil, published, slug?, actionUrl? }
+//   PUT    /api/admin/notices/{id}       body 동일 (slug 는 무시, actionUrl 은 null=유지·""=제거)
 //   DELETE /api/admin/notices/{id}
 //   POST   /api/admin/notices/images     multipart "file" → { url } (본문 이미지)
 // 작성자 입력 없음 — 앱에는 항상 "관리자"로 노출. 카테고리 없음 — 말머리를 제목에 직접([업데이트] 등).
@@ -24,6 +24,11 @@ export type Notice = {
   createdAt: string;
   // 앱이 공지를 열 때 POST /api/notices/{id}/view 로 +1. 중복 제거 없는 총 열람 수.
   viewCount: number;
+  // 앱 전용 페이지 식별자(예: ad-guide). 있으면 공지 목록·띠배너에는 안 나가고 앱의 전용 화면에서만
+  // 열리며, 삭제할 수 없다(임시저장으로 내린다). 일반 공지는 null.
+  slug?: string | null;
+  // 앱 하단 고정 버튼이 외부 브라우저로 여는 주소(https). 전용 페이지(광고 안내 등)에서 쓴다.
+  actionUrl?: string | null;
 };
 
 const fmtDate = (iso: string | null) => (iso ? iso.slice(0, 10).replaceAll("-", ".") : "");
@@ -48,7 +53,16 @@ export const NoticeList = () => {
     {
       key: "title",
       title: "제목",
-      render: (row) => <span className="font-medium">{row.title}</span>,
+      render: (row) => (
+        <span className="inline-flex items-center gap-2">
+          <span className="font-medium">{row.title}</span>
+          {row.slug && (
+            <span className="rounded-md border px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+              전용 페이지 · {row.slug}
+            </span>
+          )}
+        </span>
+      ),
     },
     {
       key: "promoteUntil",
@@ -103,7 +117,8 @@ export const NoticeList = () => {
           >
             <Pencil className="size-4" />
           </Button>
-          <DeleteRowButton resource="notices" id={row.id} label={row.title} />
+          {/* 전용 페이지는 앱 메뉴가 열고 있어 삭제하면 404 가 된다 — 서버도 막는다. */}
+          {!row.slug && <DeleteRowButton resource="notices" id={row.id} label={row.title} />}
         </div>
       ),
     },

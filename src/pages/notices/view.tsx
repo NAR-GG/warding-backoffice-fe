@@ -49,6 +49,11 @@ export const NoticeView = () => {
               임시저장
             </span>
           )}
+          {result.slug && (
+            <span className="rounded-md border px-2 py-0.5 text-xs font-medium text-foreground">
+              전용 페이지 · {result.slug}
+            </span>
+          )}
           {result.promoteUntil && (
             <span className="rounded-md border px-2 py-0.5 text-xs font-medium">
               배너 ~{fmtDateTime(result.promoteUntil).slice(0, 10)}
@@ -57,6 +62,14 @@ export const NoticeView = () => {
           <span>등록 {fmtDateTime(result.createdAt)}</span>
           <span>조회 {result.viewCount?.toLocaleString() ?? "-"}</span>
         </div>
+        {result.actionUrl && (
+          <p className="break-all text-sm text-muted-foreground">
+            하단 버튼 주소:{" "}
+            <a href={result.actionUrl} target="_blank" rel="noreferrer" className="underline">
+              {result.actionUrl}
+            </a>
+          </p>
+        )}
       </div>
 
       <NoticeContentView markdown={result.content} />
