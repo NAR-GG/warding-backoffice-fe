@@ -3,6 +3,7 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import ImageResize from "tiptap-extension-resize-image";
+import { NodeSelection } from "@tiptap/pm/state";
 import { Markdown } from "tiptap-markdown";
 import {
   Bold,
@@ -17,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -96,6 +98,31 @@ export const noticeExtensions = () => [
     transformCopiedText: true,
   }),
 ];
+
+// 이미지를 선택하면 나오는 옵션 줄. 앱 렌더러 계약: alt 가 `scroll:캡션` 인 이미지가
+// 연달아 있으면 가로 스크롤 한 줄로 묶이고 캡션이 붙는다. alt 를 직접 쓰지 않아도 되게 한다.
+const SCROLL = "scroll:";
+function ImageOptions({ alt, onChange }: { alt: string; onChange: (alt: string) => void }) {
+  const scroll = alt.startsWith(SCROLL);
+  const caption = scroll ? alt.slice(SCROLL.length) : alt;
+  return (
+    <div className="flex flex-wrap items-center gap-4 border-b bg-muted/40 px-3 py-2 text-sm">
+      <label className="flex items-center gap-2">
+        <Switch checked={scroll} onCheckedChange={(on) => onChange(on ? SCROLL + caption : caption)} />
+        가로 스크롤로 묶기
+      </label>
+      <Input
+        value={caption}
+        onChange={(e) => onChange(scroll ? SCROLL + e.target.value : e.target.value)}
+        placeholder={scroll ? "이미지 아래 캡션" : "대체 텍스트(선택)"}
+        className="h-8 w-64"
+      />
+      <span className="text-xs text-muted-foreground">
+        가로 스크롤은 이미지를 연달아(사이에 글 없이) 놓으면 한 줄로 묶여 옆으로 넘겨집니다. 이미지 크기는 모서리를 끌어 조절하세요.
+      </span>
+    </div>
+  );
+}
 
 // 공지 본문 WYSIWYG 에디터 (Orca 스타일: 상단 툴바 + 인라인 렌더링).
 // 겉은 리치 에디터지만 저장은 마크다운 문자열 — 앱 렌더러 계약 그대로.
@@ -227,6 +254,21 @@ export function NoticeEditor({ value, onChange, uploadImage }: Props) {
           }}
         />
       </div>
+      {editor.isActive("imageResize") && (
+        <ImageOptions
+          alt={(editor.getAttributes("imageResize").alt as string | null) ?? ""}
+          onChange={(alt) =>
+            // 속성만 바꾸면 이미지 선택이 풀려 옵션 줄이 사라지므로 선택을 되살린다.
+            editor.commands.command(({ tr, state }) => {
+              const sel = state.selection;
+              if (!(sel instanceof NodeSelection)) return false;
+              tr.setNodeMarkup(sel.from, undefined, { ...sel.node.attrs, alt });
+              tr.setSelection(NodeSelection.create(tr.doc, sel.from));
+              return true;
+            })
+          }
+        />
+      )}
       <EditorContent editor={editor} className="notice-editor" />
 
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
