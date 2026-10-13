@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 export type Ad = {
   id: number;
   title: string;
-  placement: "home" | "match_list" | "match_detail";
+  placement: "home" | "match_list" | "match_detail" | "splash" | "popup";
   imageUrl: string;
   linkUrl: string | null;
   sortOrder: number;
@@ -24,6 +24,17 @@ export const PLACEMENT_LABEL: Record<Ad["placement"], string> = {
   home: "홈",
   match_list: "경기 리스트",
   match_detail: "경기 상세",
+  splash: "스플래시",
+  popup: "팝업",
+};
+
+// 위치별 이미지 규격(앱 광고 안내와 같다). 등록 폼 안내에 쓴다.
+export const PLACEMENT_SIZE: Record<Ad["placement"], string> = {
+  home: "가로 3.2:1 (960×300)",
+  match_list: "가로 3.2:1 (960×300)",
+  match_detail: "가로 3.2:1 (960×300)",
+  splash: "가로 3:2 (1080×720)",
+  popup: "세로 3:4 (1080×1440)",
 };
 
 const fmt = (iso: string | null) => (iso ? iso.slice(0, 16).replace("T", " ") : "");
