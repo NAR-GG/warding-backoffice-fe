@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { API_URL } from "@/providers/constants";
 import { getValidToken } from "@/providers/auth";
-import { PLACEMENT_LABEL, type Ad } from "./list";
+import { PLACEMENT_LABEL, PLACEMENT_SIZE, type Ad } from "./list";
 
 // 이미지는 공지 이미지 업로드 API 를 그대로 쓴다 → { url }
 async function uploadImage(file: File): Promise<string> {
@@ -112,7 +112,8 @@ function AdForm({ ad }: { ad: Ad | null }) {
             onChange={(e) => pick(e.target.files?.[0])} />
         </div>
         <p className="text-xs text-muted-foreground">
-          가로:세로 = 3.2:1 권장 (예: 1280×400). 5MB 이하 png/jpg/webp/gif.
+          {PLACEMENT_LABEL[placement]} 규격: {PLACEMENT_SIZE[placement]}. 글자·로고는 가장자리에서 40px 안쪽에.
+          5MB 이하 png/jpg/webp/gif.
         </p>
       </div>
 
