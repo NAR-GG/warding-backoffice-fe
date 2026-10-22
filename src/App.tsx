@@ -23,6 +23,7 @@ import { AdCreate, AdEdit, AdList } from "./pages/ads";
 import { NoticeCreate, NoticeEdit, NoticeList, NoticeView } from "./pages/notices";
 import { LeagueConfigList } from "./pages/league-configs";
 import { RatingList } from "./pages/ratings";
+import { CheerMemberList, CheerPlayerList } from "./pages/cheers";
 import {
   SubscriptionList,
   SubscriptionDetail,
@@ -54,6 +55,7 @@ function App() {
                 { name: "subscriptions", list: "/subscriptions", meta: { label: "구독" } },
                 { name: "teams", list: "/teams", meta: { label: "팀" } },
                 { name: "ratings", list: "/ratings", meta: { label: "리뷰" } },
+                { name: "cheers", list: "/cheers", meta: { label: "응원" } },
                 {
                   name: "notices",
                   list: "/notices",
@@ -102,6 +104,11 @@ function App() {
                   <Route path="/subscriptions/matches/:matchId" element={<MatchSubscriptionDetail />} />
                   <Route path="/teams" element={<TeamList />} />
                   <Route path="/ratings" element={<RatingList />} />
+                  {/* 응원: 회원/선수 랭킹 탭. 선수 행 클릭 → 그 선수 응원 회원 */}
+                  <Route path="/cheers" element={<Navigate to="/cheers/members" replace />} />
+                  <Route path="/cheers/members" element={<CheerMemberList />} />
+                  <Route path="/cheers/players" element={<CheerPlayerList />} />
+                  <Route path="/cheers/players/:playerId" element={<CheerMemberList />} />
                   <Route path="/notices" element={<NoticeList />} />
                   <Route path="/notices/new" element={<NoticeCreate />} />
                   <Route path="/notices/:id" element={<NoticeView />} />
