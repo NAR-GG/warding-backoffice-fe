@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -18,7 +19,7 @@ import { EntityAvatar } from "@/components/entity-avatar";
 
 /**
  * 가입자 상세. 목록 행 클릭으로 진입.
- * GET /api/admin/members/{id} 하나로 구독(선수·팀)·작성 리뷰까지 다 받는다.
+ * GET /api/admin/members/{id} 하나로 구독(선수·팀)·작성 리뷰·선수별 응원까지 다 받는다.
  */
 export type MemberDetail = {
   id: number;
@@ -31,6 +32,8 @@ export type MemberDetail = {
   players: PlayerSubscription[];
   teams: TeamSubscription[];
   comments: MemberComment[];
+  // 백엔드 미배포 구간에는 없다 → 빈 배열로 본다.
+  cheers?: CheeredPlayer[];
 };
 
 type PlayerSubscription = {
@@ -48,6 +51,17 @@ type TeamSubscription = {
   teamCode: string | null;
   imageUrl: string | null;
   subscribedAt: string;
+};
+
+/** 홈 솔랭 카드 응원 버튼으로 선수에게 보낸 응원 합계(누른 횟수 많은 순). 응원 탭 선수 행과 같은 모양. */
+type CheeredPlayer = {
+  playerId: number;
+  playerName: string;
+  imageUrl: string | null;
+  teamName: string | null;
+  totalCount: number;
+  gameCount: number;
+  lastCheeredAt: string;
 };
 
 /** 회원이 남긴 선수 리뷰(live_player_rating). 앱에서 유저가 쓰는 유일한 텍스트다. */
@@ -78,6 +92,16 @@ export const MemberDetailPage = () => {
 
   if (query.isLoading) return <p className="text-sm text-muted-foreground">불러오는 중…</p>;
   if (!result) return <p className="text-sm text-destructive">가입자를 찾을 수 없습니다.</p>;
+
+  const cheers = result.cheers ?? [];
+  // 행은 (선수, 판) 단위라 선수별 판 수를 더하면 전체 판 수다.
+  const cheerTotal = cheers.reduce((sum, c) => sum + c.totalCount, 0);
+  const cheerGames = cheers.reduce((sum, c) => sum + c.gameCount, 0);
+  const lastCheer = cheers.reduce<string | null>(
+    (last, c) => (last && last > c.lastCheeredAt ? last : c.lastCheeredAt),
+    null
+  );
+  const topCheer = cheers[0]?.totalCount ?? 1;
 
   return (
     <section className="mx-auto max-w-4xl space-y-6">
@@ -115,8 +139,55 @@ export const MemberDetailPage = () => {
             )}
           </Field>
           <Field label="가입일">{fmtDate(result.createdAt)}</Field>
+          <Field label="응원">
+            {cheers.length === 0 ? (
+              <Badge variant="outline">없음</Badge>
+            ) : (
+              <span className="tabular-nums">
+                <span className="font-semibold">{cheerTotal.toLocaleString("ko-KR")}회</span> · {cheerGames}판
+                · 마지막 {lastCheer?.slice(5, 10)}
+              </span>
+            )}
+          </Field>
         </CardContent>
       </Card>
+
+      <SectionCard title="응원한 선수" count={cheers.length} unit="명">
+        <TableHeader>
+          <TableRow>
+            <TableHead>선수</TableHead>
+            <TableHead>소속팀</TableHead>
+            <TableHead>누른 횟수</TableHead>
+            <TableHead>판 수</TableHead>
+            <TableHead>마지막 응원</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {cheers.map((c) => (
+            <TableRow
+              key={c.playerId}
+              className="cursor-pointer"
+              onClick={() =>
+                navigate(`/cheers/players/${c.playerId}?name=${encodeURIComponent(c.playerName)}`)
+              }
+            >
+              <TableCell className="flex items-center gap-2 font-medium">
+                <EntityAvatar src={c.imageUrl} name={c.playerName} className="size-7" />
+                {c.playerName}
+              </TableCell>
+              <TableCell>{c.teamName ?? DASH}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Progress value={(c.totalCount / topCheer) * 100} className="w-20" />
+                  <span className="font-medium tabular-nums">{c.totalCount.toLocaleString("ko-KR")}</span>
+                </div>
+              </TableCell>
+              <TableCell className="tabular-nums">{c.gameCount}</TableCell>
+              <TableCell className="tabular-nums">{fmtDateTime(c.lastCheeredAt)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </SectionCard>
 
       <SectionCard title="선수 구독" count={result.players.length} unit="명">
         <TableHeader>
